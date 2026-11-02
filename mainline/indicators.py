@@ -51,8 +51,13 @@ def compute_theme_metrics(
     market_note: str = "",
     rs_trend_days: int = 3,
     leader_high_return: float = 0.20,
+    allow_stale: bool = False,
 ) -> dict[str, Any]:
-    """rs_trend_days / leader_high_return 由 config.yaml 的 thresholds 传入。"""
+    """rs_trend_days / leader_high_return 由 config.yaml 的 thresholds 传入。
+
+    allow_stale=True 用于盘前快照：行情尚未更新到目标日时，
+    使用各标的最近一个交易日的数据，而不是把龙头判为缺失。
+    """
     trend_days = max(int(rs_trend_days), 1)
 
     extras: dict[str, Any] = {"limit_up_series": None, "limit_up_sectors": None}
@@ -137,7 +142,7 @@ def compute_theme_metrics(
         frame = _tail_until(frame, target_date)
         if frame.empty:
             continue
-        if frame["date"].iloc[-1] != target_date:
+        if frame["date"].iloc[-1] != target_date and not allow_stale:
             stale_leaders.append(leader["code"])
             continue
         if len(frame) < 20:

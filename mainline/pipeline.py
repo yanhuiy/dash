@@ -131,8 +131,14 @@ def run(
     news_items, news_failures = news.collect_all(config, themes, target)
     failures.extend(news_failures)
 
+    # 盘前/盘中基准行情尚未更新时，涨停池也按最近一个交易日收盘统计
+    limit_days = trade_days
+    if baseline_last < target:
+        limit_days = [day for day in calendar if day <= baseline_last][-5:]
+        if not limit_days:
+            limit_days = trade_days[-6:-1] or trade_days
     limit_rows_raw, theme_heat, lu_failures, lu_available = limitup.collect(
-        config, themes, trade_days
+        config, themes, limit_days
     )
     failures.extend(lu_failures)
     if not lu_available:
@@ -171,6 +177,7 @@ def run(
             market_note=market_data["notes"].get(theme.id, ""),
             rs_trend_days=rs_trend_days,
             leader_high_return=leader_high_return,
+            allow_stale=baseline_last < target,
         )
 
     base_states: dict[str, str] = {}

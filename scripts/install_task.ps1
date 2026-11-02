@@ -13,6 +13,23 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# 注册计划任务需要管理员权限；非提升状态时自动请求 UAC
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$principal = New-Object Security.Principal.WindowsPrincipal($identity)
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "需要管理员权限，正在请求提升……"
+    $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$PSCommandPath`"")
+    if ($Remove) { $arguments += "-Remove" }
+    if ($TaskName -ne "MarketMainlineDashboard") {
+        $arguments += @("-TaskName", "`"$TaskName`"")
+    }
+    if ($StartTime -ne "07:05") {
+        $arguments += @("-StartTime", $StartTime)
+    }
+    Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList $arguments
+    exit 0
+}
+
 if ($Remove) {
     $existing = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
     if ($existing) {
