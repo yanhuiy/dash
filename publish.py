@@ -409,6 +409,14 @@ def build_page(
         else ""
     )
 
+    baseline_last = str(payload.get("baseline_last_date") or selected)
+    premarket_html = ""
+    if baseline_last < selected:
+        premarket_html = (
+            f'<div class="notice">盘前/盘中快照：行情尚未更新到 {esc(selected)}，'
+            f"当前指标基于 {esc(baseline_last)} 收盘数据，涨停热度同为该日。</div>"
+        )
+
     latest = dates[0] if dates else selected
     mode = "最新快照" if selected == latest and not is_archive else "历史快照"
     title_prefix = "" if selected == latest and not is_archive else f"{selected} · "
@@ -513,6 +521,11 @@ body {{
 .alert {{
   margin: 12px 0 0; padding: 11px 14px; border-radius: 12px; font-size: 12.5px;
   color: var(--red); background: var(--red-soft); border: 1px solid color-mix(in srgb, var(--red) 30%, transparent);
+}}
+.notice {{
+  margin: 12px 0 0; padding: 11px 14px; border-radius: 12px; font-size: 12.5px;
+  color: var(--accent); background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
 }}
 section {{ margin: 24px 0 0; }}
 h2 {{
@@ -622,6 +635,7 @@ footer p {{ margin: 4px 0; }}
 <div class="meta-strip">
   <div><span>快照日期</span><strong>{esc(date_label(selected))}</strong></div>
   <div><span>生成时间（北京时间）</span><strong>{esc(generated_at)}</strong></div>
+  <div><span>行情截至</span><strong>{esc(baseline_last)}</strong></div>
   <div><span>基准指数</span><strong>{esc(baseline)}</strong></div>
   <div><span>页面刷新</span><strong>{esc(refresh_text)}</strong></div>
 </div>
@@ -632,6 +646,7 @@ footer p {{ margin: 4px 0; }}
 </nav>
 
 {failure_html}
+{premarket_html}
 
 <section id="a">
   <h2><span class="letter">A</span> 公开政策与研报</h2>
