@@ -51,6 +51,21 @@ function Invoke-PythonStep {
     }
 }
 
+# git 的正常进度也走 stderr；局部改为 Continue，避免被 Stop 误判为失败。
+function Invoke-Git {
+    param([string[]]$Arguments, [string]$LogPath)
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        $output = & git @Arguments 2>&1 | Tee-Object -FilePath $LogPath -Append
+        $script:LastGitExit = $LASTEXITCODE
+        return $output
+    }
+    finally {
+        $ErrorActionPreference = $previous
+    }
+}
+
 Push-Location $Root
 try {
     # 强制 UTF-8，避免中文日志乱码
@@ -73,8 +88,8 @@ try {
         throw "当前目录不是 Git 仓库，请先按 README 完成 git init / remote 配置"
     }
 
-    $Remote = git remote get-url origin 2>$null
-    if ($LASTEXITCODE -ne 0 -or -not $Remote) {
+    $Remote = (Invoke-Git -Arguments @("remote", "get-url", "origin") -LogPath $LogFile) -join ""
+    if ($script:LastGitExit -ne 0 -or -not $Remote.Trim()) {
         throw "未配置 origin 远程仓库，无法推送"
     }
 
@@ -85,32 +100,33 @@ try {
         -PythonPath $Python -WorkingDir $Root -LogPath $LogFile -TempDir $LogDir
 
     Write-Log "==> 提交并推送 docs/"
-    git add docs
-    if ($LASTEXITCODE -ne 0) {
+    Invoke-Git -Arguments @("add", "docs") -LogPath $LogFile | Out-Null
+    if ($script:LastGitExit -ne 0) {
         throw "git add 失败"
     }
 
-    git diff --cached --quiet
-    if ($LASTEXITCODE -eq 0) {
+    Invoke-Git -Arguments @("diff", "--cached", "--quiet") -LogPath $LogFile | Out-Null
+    if ($script:LastGitExit -eq 0) {
         Write-Log "页面内容无变化，跳过提交"
         exit 0
     }
 
     $Message = "refresh: {0}" -f (Get-Date -Format "yyyy-MM-dd HH:mm")
-    git commit -m $Message
-    if ($LASTEXITCODE -ne 0) {
+    Invoke-Git -Arguments @("commit", "-m", $Message) -LogPath $LogFile | Out-Null
+    if ($script:LastGitExit -ne 0) {
         throw "git commit 失败"
     }
 
-    git push
-    if ($LASTEXITCODE -ne 0) {
+    # 带 -u origin HEAD：首次运行也能自动建立上游分支，避免 "no upstream branch"
+    Invoke-Git -Arguments @("push", "-u", "origin", "HEAD") -LogPath $LogFile | Out-Null
+    if ($script:LastGitExit -ne 0) {
         Write-Log "远端有新提交，尝试 rebase 后重试推送"
-        git pull --rebase --autostash
-        if ($LASTEXITCODE -ne 0) {
+        Invoke-Git -Arguments @("pull", "--rebase", "--autostash") -LogPath $LogFile | Out-Null
+        if ($script:LastGitExit -ne 0) {
             throw "git pull --rebase 失败，请手动处理后重试"
         }
-        git push
-        if ($LASTEXITCODE -ne 0) {
+        Invoke-Git -Arguments @("push", "-u", "origin", "HEAD") -LogPath $LogFile | Out-Null
+        if ($script:LastGitExit -ne 0) {
             throw "git push 失败，请检查凭证或网络"
         }
     }
