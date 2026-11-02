@@ -1,0 +1,156 @@
+# 主线池配置（核心池 6 条 + 观察池 3 条）
+# 规则：宽基指数不得作为载体；同一龙头仅归属一条主线。
+# 载体类型：index（指数）或 basket（龙头等权组合）。
+# 指数代码均为经数据源验证、当日可取的行情代码；注释中说明替代原因。
+
+themes:
+  - id: ai_compute
+    name: AI算力/科技成长
+    narrative: 资本开支扩张，算力链景气
+    tier: core
+    carrier:
+      type: index
+      index_code: "399363"        # 国证算力
+    leaders:
+      - {code: "300308", name: 中际旭创}
+      - {code: "300502", name: 新易盛}
+      - {code: "300394", name: 天孚通信}
+      - {code: "601138", name: 工业富联}
+      - {code: "000977", name: 浪潮信息}
+    catalyst_words: [英伟达, 光模块, 资本开支, 大模型, 算力租赁, 服务器, 算力, AI芯片, 数据中心]
+    limit_up_tags: [通信设备, 消费电子, 元件, 光学光电, 计算机设备, 软件开发, IT服务]
+    primary_leader_map: {}
+
+  - id: semiconductor
+    name: 半导体/国产替代
+    narrative: 周期复苏 + 自主可控
+    tier: core
+    carrier:
+      type: index
+      index_code: "980017"        # 国证芯片
+    leaders:
+      - {code: "688981", name: 中芯国际}
+      - {code: "002371", name: 北方华创}
+      - {code: "688012", name: 中微公司}
+      - {code: "603501", name: 韦尔股份}
+      - {code: "688256", name: 寒武纪}
+    catalyst_words: [制裁, 大基金, 晶圆, 设备, 材料, 国产替代, 半导体, 芯片, 光刻]
+    limit_up_tags: [半导体, 元件, 光学光电]
+    primary_leader_map: {}
+
+  - id: dividend
+    name: 红利防御/高股息
+    narrative: 低利率下高股息配置
+    tier: core
+    carrier:
+      type: index
+      index_code: "000015"        # 上证红利；中证红利 000922 在当前行情源已停更，改用上证红利
+    leaders:
+      - {code: "601398", name: 工商银行}
+      - {code: "600900", name: 长江电力}
+      - {code: "601088", name: 中国神华}
+      - {code: "600941", name: 中国移动}
+      - {code: "601288", name: 农业银行}
+    catalyst_words: [降息, 险资, 分红, 央企, 低波, 高股息, 红利, 银行]
+    limit_up_tags: [银行, 电力, 煤炭, 公用事业, 保险, 铁路公路]
+    primary_leader_map: {}
+
+  - id: gold
+    name: 黄金/贵金属
+    narrative: 美联储 + 地缘 + 央行购金
+    tier: core
+    carrier:
+      type: basket               # TODO: 暂未找到当日可取的黄金股指数源，先用龙头等权组合
+    leaders:
+      - {code: "600547", name: 山东黄金}
+      - {code: "601899", name: 紫金矿业}
+      - {code: "600489", name: 中金黄金}
+      - {code: "600988", name: 赤峰黄金}
+      - {code: "000975", name: 山金国际}
+    catalyst_words: [美联储, 金价, 央行购金, 地缘, 实际利率, 黄金, 避险]
+    limit_up_tags: [贵金属, 珠宝首饰]
+    primary_leader_map: {}
+
+  - id: consumer
+    name: 消费/内需
+    narrative: 促消费 + 估值修复
+    tier: core
+    carrier:
+      type: index
+      index_code: "000932"        # 中证消费
+    leaders:
+      - {code: "600519", name: 贵州茅台}
+      - {code: "000858", name: 五粮液}
+      - {code: "600887", name: 伊利股份}
+      - {code: "000333", name: 美的集团}
+      - {code: "601888", name: 中国中免}
+    catalyst_words: [促消费, CPI, 社零, 以旧换新, 旅游, 消费, 白酒]
+    limit_up_tags: [白酒, 食品饮料, 饮料, 零售, 旅游, 酒店, 家电, 家居]
+    primary_leader_map: {}
+
+  - id: pharma
+    name: 医药/创新药
+    narrative: 创新药出海 + 集采出清
+    tier: core
+    carrier:
+      type: index
+      index_code: "399265"        # 创新药械
+    leaders:
+      - {code: "600276", name: 恒瑞医药}
+      - {code: "603259", name: 药明康德}
+      - {code: "688235", name: 百济神州}
+      - {code: "300760", name: 迈瑞医疗}
+      - {code: "600436", name: 片仔癀}
+    catalyst_words: [医保, 创新药出海, 审批, 集采, BD授权, 创新药, 医药]
+    limit_up_tags: [化学制药, 生物制品, 医疗服务, 医疗器械, 中药]
+    primary_leader_map: {}
+
+  - id: going_global
+    name: 出海/高端制造
+    narrative: 海外订单 + 关税博弈
+    tier: watch
+    carrier:
+      type: basket               # TODO: 暂未找到当日可取的“高端制造”指数源，先用龙头等权组合
+    leaders:
+      - {code: "002594", name: 比亚迪}
+      - {code: "300750", name: 宁德时代}
+      - {code: "600031", name: 三一重工}
+      - {code: "600690", name: 海尔智家}
+      - {code: "600660", name: 福耀玻璃}
+    catalyst_words: [关税, 海外订单, 出口, 新能源车, 家电, 出海, 光伏]
+    limit_up_tags: [汽车整车, 汽车零部件, 电池, 光伏设备, 风电设备, 家电, 通用设备, 专用设备]
+    primary_leader_map: {}
+
+  - id: cyclical
+    name: 周期/资源
+    narrative: 供给约束 + 需求修复
+    tier: watch
+    carrier:
+      type: index
+      index_code: "000819"        # 有色金属
+    leaders:
+      - {code: "603993", name: 洛阳钼业}
+      - {code: "600362", name: 江西铜业}
+      - {code: "600188", name: 兖矿能源}
+      - {code: "600019", name: 宝钢股份}
+      - {code: "601857", name: 中国石油}
+    catalyst_words: [铜价, 库存, OPEC, 地产开工, 限产, 有色, 煤炭, 原油]
+    limit_up_tags: [有色金属, 工业金属, 小金属, 煤炭, 石油, 化学原料, 钢铁]
+    primary_leader_map: {}
+
+  - id: defense
+    name: 军工/安全
+    narrative: 地缘 + 订单周期
+    tier: watch
+    carrier:
+      type: index
+      index_code: "399967"        # 中证军工
+    leaders:
+      - {code: "600760", name: 中航沈飞}
+      - {code: "600893", name: 航发动力}
+      - {code: "002179", name: 中航光电}
+      - {code: "000768", name: 中航西飞}
+      - {code: "600316", name: 洪都航空}
+    catalyst_words: [地缘, 订单, 军费, 重组, 军工, 国防]
+    limit_up_tags: [航天装备, 航空装备, 地面兵装, 军工电子, 船舶制造]
+    primary_leader_map: {}

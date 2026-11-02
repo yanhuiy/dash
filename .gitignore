@@ -1,0 +1,14 @@
+# Python / 运行产物
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 本地数据与日志
+data/
+logs/
+
+# 编辑器 / 系统
+.streamlit/secrets.toml
+.DS_Store
+Thumbs.db

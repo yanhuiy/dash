@@ -1,0 +1,17 @@
+# 持仓备注：纯展示，不参与任何计算。
+# 请替换为你的真实持仓；theme 填主线 id，映射不上则填 null（显示为宽基/未映射）。
+# risk_note 可手工补充公告/风险；留空时看板只会展示当日匹配到的公开负面消息条数。
+
+holdings:
+  - code: "601899"
+    name: 紫金矿业
+    theme: gold
+    risk_note: ""
+  - code: "300308"
+    name: 中际旭创
+    theme: ai_compute
+    risk_note: ""
+  - code: "510300"
+    name: 沪深300ETF
+    theme: null
+    risk_note: "宽基指数基金，仅作备注"

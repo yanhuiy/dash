@@ -1,0 +1,67 @@
+# 市场主线切换盘后看板 - 全局配置
+# 所有阈值、信源、路径均在此调整，无需改代码。
+
+baseline_index: "000300"          # 基准指数：沪深300
+run_time: "18:00"
+timezone: "Asia/Shanghai"
+
+# 催化计数窗口（交易日）
+catalyst_window_days: 5
+# 新闻/研报展示回溯天数（自然日）
+news_lookback_days: 7
+# 看板每个区块最多展示条数
+display_max_policy: 3
+display_max_research: 3
+
+thresholds:
+  rs_trend_days: 3                # RS 连续上升/下降天数（强化/走弱判定与文案）
+  volume_ratio_strong: 1.5
+  volume_ratio_weak: 0.8
+  breadth_strong: 0.6
+  breadth_weak: 0.4
+  leaders_below_ma20_min: 2       # 走弱时至少多少只龙头跌破20日线
+  confirm_days: 2                 # 切换确认所需连续天数（含当日）
+  crowded_5d_return: 0.15
+  crowded_volume_ratio: 2.0
+  crowded_leader_5d_return: 0.20  # 龙头5日涨幅“过热”阈值
+  crowded_leader_ratio: 0.6       # 达到该比例的龙头过热即判拥挤
+
+limit_up:
+  enable_as_aux: false            # 涨停数据仅作强化/走弱参考，默认不参与判定
+  min_count_per_day: 3
+  consecutive_days: 2
+
+sources:
+  policy: [gov_cn, pboc, csrc, stats]
+  research: [eastmoney_report]
+  news: [wallstreetcn]
+  market_api: [tencent_index, sina_stock, sina_global, eastmoney_bond]
+  limit_up: [eastmoney_limitup]
+
+themes_file: "themes.yaml"
+holdings_file: "holdings.yaml"
+
+output:
+  sqlite_path: "data/market.db"
+  dashboard_port: 8501
+  email_enabled: false            # 第一版不实现邮件推送
+
+# GitHub Pages 静态看板导出（publish.py）
+publish:
+  output_dir: "docs"
+  include_holdings: true          # 仓库公开时建议改为 false，避免持仓信息外泄
+  archive_limit: 180              # 最多保留多少个历史日期页面
+  auto_refresh_seconds: 600       # 最新页自动重载间隔（秒），0 表示关闭
+  site_title: "市场主线切换盘后看板"
+
+# AI 仅用于一句话摘要与情绪分类，不预测涨跌。默认关闭，关闭时使用规则摘要。
+ai:
+  enabled: false
+  base_url: "https://api.openai.com/v1"
+  model: "gpt-4o-mini"
+  api_key_env: "OPENAI_API_KEY"
+  timeout: 30
+
+logging:
+  dir: "logs"
+  level: "INFO"
