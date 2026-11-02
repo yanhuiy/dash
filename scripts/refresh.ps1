@@ -17,12 +17,37 @@ function Write-Log {
     Write-Host $line
 }
 
-function Invoke-Step {
-    param([string]$Title, [scriptblock]$Command)
+# 用 Start-Process 重定向，避免 PowerShell 把 Python 的 stderr 日志当成
+# NativeCommandError（在 ErrorActionPreference=Stop 下会直接中断脚本）。
+function Invoke-PythonStep {
+    param(
+        [string]$Title,
+        [string[]]$Arguments,
+        [string]$PythonPath,
+        [string]$WorkingDir,
+        [string]$LogPath,
+        [string]$TempDir
+    )
     Write-Log "==> $Title"
-    & $Command 2>&1 | Tee-Object -FilePath $LogFile -Append
-    if ($LASTEXITCODE -ne 0) {
-        throw "$Title 失败（退出码 $LASTEXITCODE）"
+    $stamp = Get-Date -Format "HHmmssfff"
+    $outFile = Join-Path $TempDir "step_$stamp.out"
+    $errFile = Join-Path $TempDir "step_$stamp.err"
+    try {
+        $process = Start-Process -FilePath $PythonPath -ArgumentList $Arguments `
+            -WorkingDirectory $WorkingDir -Wait -PassThru -NoNewWindow `
+            -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+        if (Test-Path $outFile) {
+            Get-Content $outFile -Encoding UTF8 | Tee-Object -FilePath $LogPath -Append
+        }
+        if (Test-Path $errFile) {
+            Get-Content $errFile -Encoding UTF8 | Tee-Object -FilePath $LogPath -Append
+        }
+        if ($process.ExitCode -ne 0) {
+            throw "$Title 失败（退出码 $($process.ExitCode)）"
+        }
+    }
+    finally {
+        Remove-Item $outFile, $errFile -ErrorAction SilentlyContinue
     }
 }
 
@@ -31,6 +56,7 @@ try {
     # 强制 UTF-8，避免中文日志乱码
     $env:PYTHONUTF8 = "1"
     $env:PYTHONIOENCODING = "utf-8"
+    $env:TQDM_DISABLE = "1"
     $env:GIT_TERMINAL_PROMPT = "0"
     [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
@@ -52,8 +78,11 @@ try {
         throw "未配置 origin 远程仓库，无法推送"
     }
 
-    Invoke-Step "采集与落库" { & $Python run_daily.py --intraday }
-    Invoke-Step "生成静态页面" { & $Python publish.py }
+    Invoke-PythonStep -Title "采集与落库" -Arguments @("run_daily.py", "--intraday") `
+        -PythonPath $Python -WorkingDir $Root -LogPath $LogFile -TempDir $LogDir
+
+    Invoke-PythonStep -Title "生成静态页面" -Arguments @("publish.py") `
+        -PythonPath $Python -WorkingDir $Root -LogPath $LogFile -TempDir $LogDir
 
     Write-Log "==> 提交并推送 docs/"
     git add docs
@@ -90,7 +119,9 @@ try {
     exit 0
 }
 catch {
-    Write-Log "刷新失败：$($_.Exception.Message)"
+    $message = $_.Exception.Message
+    if (-not $message) { $message = ($_ | Out-String).Trim() }
+    Write-Log "刷新失败：$message"
     exit 1
 }
 finally {

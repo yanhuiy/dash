@@ -46,7 +46,7 @@ def main() -> int:
         rs = "—" if item["rs"] is None else f"{item['rs'] * 100:+.1f}%"
         print(f"  {item['name']:<12} {item['status']:<16} RS {rs:>7}  {item['note']}")
     directions = result["directions"]
-    names = {item["theme_id"]: item["name"] for item in result["themes"]}
+    names = {item["id"]: item["name"] for item in result["themes"]}
     basis_map = directions.get("basis") or {}
     print("三大方向：")
     for key, label in (("strongest", "当前最强"), ("switching", "潜在切换"), ("weakening", "走弱/风险")):
