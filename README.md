@@ -56,6 +56,22 @@ git push -u origin main
 计划任务运行时无法交互输入密码，`refresh.ps1` 已设置 `GIT_TERMINAL_PROMPT=0`，
 凭据缺失时会直接失败并写入日志。
 
+如果网络封掉了 `github.com:443`（报 `Recv failure: Connection was reset`），
+可以改走 SSH 的 443 端口（`ssh.github.com:443`）：
+
+```powershell
+# 1. 生成无口令密钥（计划任务需要无人值守推送）
+ssh-keygen -t ed25519 -C "dashboard" -f "$env:USERPROFILE\.ssh\id_ed25519"
+#    提示 passphrase 时直接回车两次
+
+# 2. 把 id_ed25519.pub 整行内容加到 GitHub → Settings → SSH and GPG keys（Authentication Key）
+
+# 3. 记录主机指纹，然后改用 443 端口的 SSH 地址
+ssh-keyscan -p 443 ssh.github.com >> "$env:USERPROFILE\.ssh\known_hosts"
+git remote set-url origin ssh://git@ssh.github.com:443/<你的用户名>/<仓库名>.git
+git push -u origin main
+```
+
 ### 2. 开启 GitHub Pages
 
 仓库 → **Settings** → **Pages**：
@@ -69,8 +85,9 @@ git push -u origin main
 
 ### 3. 隐私提示
 
-- **公开仓库**：`holdings.yaml`、页面 D 区块中的持仓会被所有人看到。
-  建议把 `config.yaml` 中 `publish.include_holdings` 改为 `false`，并清空或替换 `holdings.yaml` 中的真实持仓。
+- **公开仓库**：`holdings.yaml` 本身会随仓库公开，页面 D 区块中的持仓也会被所有人看到。
+  当前 `config.yaml` 已设置 `publish.include_holdings: false`（静态页不渲染 D 区块，
+  本地 Streamlit 看板仍显示）；如需彻底隐藏，还应清空或替换 `holdings.yaml` 中的真实持仓。
 - **私有仓库**：GitHub Pages 需要付费套餐（Pro/Team/Enterprise），且站点默认仍是公开可访问。
 - 页面已添加 `<meta name="robots" content="noindex">`，但不要把它当成访问控制。
 - 如果持仓敏感，建议只在本地使用 Streamlit 看板，或部署到需要登录的托管平台。
