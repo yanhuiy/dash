@@ -1,7 +1,8 @@
-﻿# 注册 Windows 计划任务：周一至周五 07:05 开始，每小时刷新一次，共 8 次（到 15:05）
+﻿# 注册 Windows 计划任务：周一至周五 07:05 起每小时刷新一次，到 15:05 结束（共 9 次）
 #
 # 安装：
 #   powershell -ExecutionPolicy Bypass -File scripts\install_task.ps1
+#   powershell -ExecutionPolicy Bypass -File scripts\install_task.ps1 -StartTime 09:35
 # 卸载：
 #   powershell -ExecutionPolicy Bypass -File scripts\install_task.ps1 -Remove
 
@@ -67,6 +68,8 @@ $Settings = New-ScheduledTaskSettingsSet `
     -StartWhenAvailable `
     -MultipleInstances IgnoreNew `
     -ExecutionTimeLimit (New-TimeSpan -Minutes 30) `
+    -RestartCount 2 `
+    -RestartInterval (New-TimeSpan -Minutes 5) `
     -AllowStartIfOnBatteries `
     -DontStopIfGoingOnBatteries
 
@@ -89,3 +92,12 @@ Write-Host "已注册计划任务：$TaskName"
 Write-Host "运行时间：周一至周五 $StartTime 起，每小时一次，至 15:05"
 Write-Host "日志目录：$(Join-Path $Root 'logs')"
 Write-Host "手动测试：Start-ScheduledTask -TaskName $TaskName"
+
+# 回读注册结果，确认触发器与实例策略生效
+$Registered = Get-ScheduledTask -TaskName $TaskName
+$Repetition = $Registered.Triggers[0].Repetition
+Write-Host ""
+Write-Host "触发器检查：间隔=$($Repetition.Interval)  持续=$($Repetition.Duration)  星期=$($Registered.Triggers[0].DaysOfWeek)"
+Write-Host "实例策略：$($Registered.Settings.MultipleInstances)  超时=$($Registered.Settings.ExecutionTimeLimit)  失败重启=$($Registered.Settings.RestartCount)次"
+$Info = Get-ScheduledTaskInfo -TaskName $TaskName
+Write-Host "状态：$($Registered.State)  上次运行=$($Info.LastRunTime)  上次结果=$($Info.LastTaskResult)"

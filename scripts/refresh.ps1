@@ -1,6 +1,12 @@
 ﻿# 交易时段刷新：采集 -> 生成静态页面 -> 提交并推送 GitHub
 # 由 Windows 计划任务调用，也可以手动执行：
 #   powershell -ExecutionPolicy Bypass -File scripts\refresh.ps1
+#   powershell -ExecutionPolicy Bypass -File scripts\refresh.ps1 -SkipPush   # 只采集+导出，不提交不推送
+
+param(
+    # 只跑采集与页面导出，便于本地验证；不执行 git add/commit/push
+    [switch]$SkipPush
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -9,6 +15,13 @@ $LogDir = Join-Path $Root "logs"
 $LogFile = Join-Path $LogDir ("refresh_{0}.log" -f (Get-Date -Format "yyyyMMdd"))
 
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+
+# 日志只保留最近 30 天，避免每天 9 次刷新把磁盘堆满
+Get-ChildItem -Path $LogDir -Filter "refresh_*.log" -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } |
+    Remove-Item -Force -ErrorAction SilentlyContinue
+
+$StartedAt = Get-Date
 
 function Write-Log {
     param([string]$Message)
@@ -99,6 +112,12 @@ try {
     Invoke-PythonStep -Title "生成静态页面" -Arguments @("publish.py") `
         -PythonPath $Python -WorkingDir $Root -LogPath $LogFile -TempDir $LogDir
 
+    if ($SkipPush) {
+        $elapsed = [int]((Get-Date) - $StartedAt).TotalSeconds
+        Write-Log "已指定 -SkipPush：跳过提交与推送（耗时 $elapsed 秒）"
+        exit 0
+    }
+
     Write-Log "==> 提交并推送 docs/"
     Invoke-Git -Arguments @("add", "docs") -LogPath $LogFile | Out-Null
     if ($script:LastGitExit -ne 0) {
@@ -144,13 +163,15 @@ try {
         }
     }
 
-    Write-Log "刷新完成并已推送"
+    $elapsed = [int]((Get-Date) - $StartedAt).TotalSeconds
+    Write-Log "刷新完成并已推送（耗时 $elapsed 秒）"
     exit 0
 }
 catch {
     $message = $_.Exception.Message
     if (-not $message) { $message = ($_ | Out-String).Trim() }
-    Write-Log "刷新失败：$message"
+    $elapsed = [int]((Get-Date) - $StartedAt).TotalSeconds
+    Write-Log "刷新失败（耗时 $elapsed 秒）：$message"
     exit 1
 }
 finally {
