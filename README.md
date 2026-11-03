@@ -34,6 +34,11 @@ streamlit run app.py
 `--intraday` 会让盘前/盘中运行时仍按“今天”生成快照，避免把上一交易日的归档覆盖掉。
 同一日期多次运行会覆盖当日快照，属于设计行为。
 
+D 区块“持仓备注”优先读取 `config.yaml` 中 `breakout.daily_dir`
+（默认 `D:/trae-project/breakout_v3/daily`）下的 `holdings.csv` / `watchlist.csv`，
+实时展示、不参与主线计算；目录或文件不可用时回退到快照中的本地 `holdings.yaml`。
+该区块只在本地 Streamlit 看板渲染，静态页由 `publish.include_holdings` 控制（当前关闭）。
+
 ## 二、推送到 GitHub
 
 ### 1. 初始化仓库并首次推送

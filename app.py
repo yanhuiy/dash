@@ -8,7 +8,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from mainline import db
+from mainline import breakout, db
 from mainline.config import load_config, load_themes
 from mainline.directions import BASIS_LABELS, choose_directions, conclusion
 from mainline.labels import CATEGORY_LABELS, TIER_LABELS, sentiment_label, status_label
@@ -323,7 +323,54 @@ with st.expander("全部主线指标与状态"):
 
 # ---------------- 区块 D ----------------
 st.header("D. 持仓备注（纯展示，不参与计算）")
-if holdings:
+
+# 优先读取 config.yaml 中 breakout.daily_dir 下的 holdings.csv / watchlist.csv（实时数据）；
+# 目录或文件不可用时，回退到快照中的 holdings.yaml。
+breakout_holdings = breakout.load_holdings(CONFIG)
+breakout_watch = breakout.load_watchlist(CONFIG)
+breakout_root = breakout.daily_dir(CONFIG)
+
+if breakout_holdings is not None:
+    if breakout_holdings:
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {
+                        "代码": row["code"],
+                        "名称": row["name"],
+                        "信号": row["signal"],
+                        "成本价": row["cost"],
+                        "买入日期": row["buy_date"],
+                    }
+                    for row in breakout_holdings
+                ]
+            ),
+            hide_index=True,
+            width="stretch",
+        )
+    else:
+        st.info(f"{breakout_root / 'holdings.csv'} 存在，但没有有效持仓行。")
+
+    if breakout_watch:
+        st.subheader("个股观察清单")
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {
+                        "代码": row["code"],
+                        "名称": row["name"],
+                        "层级": row["tier"],
+                        "备注": row["note"],
+                    }
+                    for row in breakout_watch
+                ]
+            ),
+            hide_index=True,
+            width="stretch",
+        )
+
+    st.caption(f"数据来源：{breakout_root / 'holdings.csv'}（实时读取，不参与主线计算）")
+elif holdings:
     holding_rows = [
         {
             "代码": row["code"],
@@ -336,8 +383,9 @@ if holdings:
         for row in holdings
     ]
     st.dataframe(pd.DataFrame(holding_rows), hide_index=True, width="stretch")
+    st.caption("数据来源：快照中的 holdings.yaml（未配置可用的 breakout.daily_dir）")
 else:
-    st.info("holdings.yaml 未配置持仓。")
+    st.info("未找到 breakout.daily_dir 下的 holdings.csv，holdings.yaml 也未配置持仓。")
 
 st.divider()
 st.caption(
