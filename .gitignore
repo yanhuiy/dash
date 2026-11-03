@@ -8,6 +8,11 @@ venv/
 data/
 logs/
 
+# 回测产物（run_backtest.py 生成，可随时重新跑出，不入库）
+reports/backtest_*.csv
+reports/backtest_*.json
+reports/backtest_*.md
+
 # 编辑器 / 系统
 .streamlit/secrets.toml
 .DS_Store
