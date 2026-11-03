@@ -117,17 +117,30 @@ try {
         throw "git commit 失败"
     }
 
-    # 带 -u origin HEAD：首次运行也能自动建立上游分支，避免 "no upstream branch"
-    Invoke-Git -Arguments @("push", "-u", "origin", "HEAD") -LogPath $LogFile | Out-Null
-    if ($script:LastGitExit -ne 0) {
-        Write-Log "远端有新提交，尝试 rebase 后重试推送"
+    # 网络抖动（Empty reply / 连接超时）很常见，推送按「重试 → rebase 再重试」处理。
+    function Invoke-Push([int]$Attempts = 3, [int]$DelaySeconds = 10) {
+        for ($i = 1; $i -le $Attempts; $i++) {
+            Invoke-Git -Arguments @("push", "-u", "origin", "HEAD") -LogPath $LogFile | Out-Null
+            if ($script:LastGitExit -eq 0) {
+                return $true
+            }
+            if ($i -lt $Attempts) {
+                Write-Log "git push 第 $i 次失败，$DelaySeconds 秒后重试"
+                Start-Sleep -Seconds $DelaySeconds
+            }
+        }
+        return $false
+    }
+
+    $Pushed = Invoke-Push
+    if (-not $Pushed) {
+        Write-Log "推送持续失败，尝试 rebase 后再推"
         Invoke-Git -Arguments @("pull", "--rebase", "--autostash") -LogPath $LogFile | Out-Null
         if ($script:LastGitExit -ne 0) {
             throw "git pull --rebase 失败，请手动处理后重试"
         }
-        Invoke-Git -Arguments @("push", "-u", "origin", "HEAD") -LogPath $LogFile | Out-Null
-        if ($script:LastGitExit -ne 0) {
-            throw "git push 失败，请检查凭证或网络"
+        if (-not (Invoke-Push -Attempts 2)) {
+            throw "git push 失败（已重试），请检查网络、凭证或远端状态"
         }
     }
 
