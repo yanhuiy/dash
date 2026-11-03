@@ -68,7 +68,7 @@ output:
 # GitHub Pages 静态看板导出（publish.py）
 publish:
   output_dir: "docs"
-  include_holdings: true          # 仓库公开时建议改为 false，避免持仓信息外泄
+  include_holdings: false         # 仓库公开，静态页不渲染 D 区块持仓；本地 Streamlit 仍显示
   archive_limit: 180              # 最多保留多少个历史日期页面
   auto_refresh_seconds: 600       # 最新页自动重载间隔（秒），0 表示关闭
   site_title: "市场主线切换盘后看板"

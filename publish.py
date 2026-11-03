@@ -444,6 +444,12 @@ def build_page(
     generated_at = data.get("generated_at") or payload.get("generated_at") or "—"
     baseline = payload.get("baseline_index") or "—"
 
+    # 副标题按实际渲染的区块数生成，避免关掉 D 区块后仍写“四区块/持仓备注”
+    block_names = ["政策研报", "美股期货", "三大方向"]
+    if include_holdings:
+        block_names.append("持仓备注")
+    sub_label = f"{'四' if include_holdings else '三'}区块：" + " · ".join(block_names)
+
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -624,7 +630,7 @@ footer p {{ margin: 4px 0; }}
   <div>
     <p class="eyebrow">MARKET MAINLINE DASHBOARD</p>
     <h1>{esc(site_title)}</h1>
-    <p class="sub">交易时段每小时刷新 ｜ 四区块：政策研报 · 美股期货 · 三大方向 · 持仓备注</p>
+    <p class="sub">交易时段每小时刷新 ｜ {sub_label}</p>
   </div>
   <div class="hero-side">
     <span class="pill">{mode}</span>
