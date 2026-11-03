@@ -111,7 +111,7 @@ if not dates:
 
 head_left, head_right = st.columns([4, 1])
 with head_left:
-    st.caption("盘后固定更新 ｜ 四区块：政策研报 · 美股期货 · 三大方向 · 持仓备注")
+    st.caption("交易时段每小时更新 ｜ 四区块：政策研报 · 美股期货 · 三大方向 · 持仓备注")
 with head_right:
     selected = st.selectbox("日期", dates, index=0, label_visibility="collapsed")
 

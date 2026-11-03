@@ -31,10 +31,6 @@ python publish.py
 streamlit run app.py
 ```
 
-D 区块“持仓备注”优先读取 `config.yaml` 中 `breakout.daily_dir`（默认
-`D:/trae-project/breakout_v3/daily`）下的 `holdings.csv` / `watchlist.csv`，
-实时展示、不参与主线计算；该路径不可用时回退到快照中的本地 `holdings.yaml`。
-
 `--intraday` 会让盘前/盘中运行时仍按“今天”生成快照，避免把上一交易日的归档覆盖掉。
 同一日期多次运行会覆盖当日快照，属于设计行为。
 
@@ -75,8 +71,6 @@ git push -u origin main
 
 - **公开仓库**：`holdings.yaml`、页面 D 区块中的持仓会被所有人看到。
   建议把 `config.yaml` 中 `publish.include_holdings` 改为 `false`，并清空或替换 `holdings.yaml` 中的真实持仓。
-  若 D 区块读取的是 `breakout.daily_dir` 下的真实持仓，注意 `app.py` 为本地展示，
-  `publish.py` 静态页仍使用快照中的 `holdings.yaml`。
 - **私有仓库**：GitHub Pages 需要付费套餐（Pro/Team/Enterprise），且站点默认仍是公开可访问。
 - 页面已添加 `<meta name="robots" content="noindex">`，但不要把它当成访问控制。
 - 如果持仓敏感，建议只在本地使用 Streamlit 看板，或部署到需要登录的托管平台。

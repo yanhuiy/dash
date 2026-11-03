@@ -14,10 +14,10 @@ display_max_policy: 3
 display_max_research: 3
 
 thresholds:
-  rs_trend_days: 3                # RS 连续上升/下降天数（强化/走弱判定与文案）
+  rs_trend_days: 4                # RS 连续上升/下降天数；回测滚动样本外 3/3 折为正
   volume_ratio_strong: 1.5
   volume_ratio_weak: 0.8
-  breadth_strong: 0.6
+  breadth_strong: 0.8             # 强化宽度门槛；回测各折均选中 0.8
   breadth_weak: 0.4
   leaders_below_ma20_min: 2       # 走弱时至少多少只龙头跌破20日线
   confirm_days: 2                 # 切换确认所需连续天数（含当日）
@@ -25,6 +25,20 @@ thresholds:
   crowded_volume_ratio: 2.0
   crowded_leader_5d_return: 0.20  # 龙头5日涨幅“过热”阈值
   crowded_leader_ratio: 0.6       # 达到该比例的龙头过热即判拥挤
+
+# 本地参考数据：仅用于回测（run_backtest.py），不参与每日流水线。
+# 目录不可用时自动关闭本地增强，回测退回纯远程行情口径。
+local_data:
+  enabled: true
+  breakout_dir: "D:/trae-project/breakout_v3"
+  ice_rebound_dir: "D:/trae-project/ice-rebound"
+  # 回测载体覆盖：生产仍使用 themes.yaml 的指数，这里仅在回测中换用更长历史的代理。
+  carrier_overrides:
+    semiconductor: {type: etf, code: "588200"}   # 科创芯片ETF，2022-10 起，含成交额
+  # 概念宽度：同花顺概念指数（breakout_v3/data_ths_index），未映射或概念数<3 的主线回退龙头宽度。
+  concept_map:
+    ai_compute: ["东数西算(算力)", "共封装光学(CPO)", "数据中心(AIDC)", "算力租赁", "液冷服务器"]
+    semiconductor: ["芯片概念", "第三代半导体", "汽车芯片", "MCU芯片", "存储芯片"]
 
 limit_up:
   enable_as_aux: false            # 涨停数据仅作强化/走弱参考，默认不参与判定
@@ -40,6 +54,11 @@ sources:
 
 themes_file: "themes.yaml"
 holdings_file: "holdings.yaml"
+
+# D 区块持仓备注：优先读取 breakout_v3 的 daily 目录（纯展示，不参与主线计算）。
+# 目录不存在时回退到 holdings_file 配置的本地持仓。
+breakout:
+  daily_dir: "D:/trae-project/breakout_v3/daily"
 
 output:
   sqlite_path: "data/market.db"

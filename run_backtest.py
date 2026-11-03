@@ -1,10 +1,11 @@
 """主线参数回测入口。
 
 用法：
-    python run_backtest.py                          # 近 3 年，优先用缓存
+    python run_backtest.py                          # 默认 4 年，优先用缓存
     python run_backtest.py --refresh                # 强制重新下载行情
     python run_backtest.py --start 2023-01-01 --end 2026-11-02
     python run_backtest.py --workers 1              # 网络不稳时串行下载
+    python run_backtest.py --no-local               # 关闭本地数据增强
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from mainline.backtest import run
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="市场主线切换参数回测")
-    parser.add_argument("--start", help="回测起始日 YYYY-MM-DD，默认近 3 年")
+    parser.add_argument("--start", help="回测起始日 YYYY-MM-DD，默认 4 年（关闭本地数据时 3 年）")
     parser.add_argument("--end", help="回测结束日 YYYY-MM-DD，默认今天")
     parser.add_argument("--refresh", action="store_true", help="忽略缓存重新下载行情")
     parser.add_argument("--workers", type=int, default=1, help="行情并发下载数（akshare 建议串行）")
@@ -26,6 +27,7 @@ def main() -> int:
     parser.add_argument("--min-signals", type=int, default=30, help="训练集最少信号数")
     parser.add_argument("--out", default="reports", help="报告输出目录")
     parser.add_argument("--cache", default="data/backtest_cache", help="行情缓存目录")
+    parser.add_argument("--no-local", action="store_true", help="关闭本地数据增强（breakout_v3 / ice-rebound）")
     parser.add_argument("--json", action="store_true", help="输出完整 JSON 摘要")
     args = parser.parse_args()
 
@@ -41,6 +43,7 @@ def main() -> int:
             min_signals=args.min_signals,
             out_dir=args.out,
             cache_dir=args.cache,
+            use_local=not args.no_local,
         )
     except Exception as exc:
         print(f"回测失败：{type(exc).__name__}: {exc}")
@@ -60,6 +63,12 @@ def main() -> int:
         f"  走弱 {current['weak_total']} 次（10日胜率 {current['weak_hit_10']}，"
         f"超额 {current['weak_ex_10']}）"
     )
+    local = result.get("local_data") or {}
+    if local.get("enabled"):
+        sources = local.get("carrier_sources") or {}
+        rough = sources.get("semiconductor")
+        if rough:
+            print(f"  半导体回测载体：{rough}")
     print(f"报告：{result['files']['md']}")
     return 0
 
