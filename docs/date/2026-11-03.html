@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+
+<title>2026-11-03 · 市场主线切换盘后看板</title>
+<style>
+:root {
+  --bg: #f4f6fb; --card: #ffffff; --text: #16202f; --muted: #6b7788;
+  --line: #e3e8f0; --accent: #2457d6; --accent-soft: #eaf0ff;
+  --green: #0f8a5f; --green-soft: #e3f6ee;
+  --red: #c43b3b; --red-soft: #fdeaea;
+  --orange: #b06a00; --orange-soft: #fff3dc;
+  --purple: #6b3fa0; --purple-soft: #f0e9fb;
+  --gray: #657184; --gray-soft: #eef1f5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f141c; --card: #17202c; --text: #e9eef7; --muted: #95a3b8;
+    --line: #263242; --accent: #7aa2ff; --accent-soft: #1c2b4a;
+    --green: #64d3a4; --green-soft: #123328;
+    --red: #ff8b8b; --red-soft: #3a1c1f;
+    --orange: #f0b95f; --orange-soft: #362913;
+    --purple: #c3a5f7; --purple-soft: #2a2140;
+    --gray: #a1adbd; --gray-soft: #232c38;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 22px 16px 40px; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei",
+    "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  font-size: 14px; line-height: 1.6;
+}
+.wrap { max-width: 1180px; margin: 0 auto; }
+.hero {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+  gap: 18px; padding: 24px 26px; border-radius: 18px; color: #fff;
+  background: linear-gradient(120deg, #173a8a 0%, #2457d6 55%, #3c7af0 100%);
+  box-shadow: 0 14px 34px rgba(24, 56, 130, .18);
+}
+.eyebrow { margin: 0 0 4px; font-size: 11px; letter-spacing: .16em; opacity: .72; }
+.hero h1 { margin: 0; font-size: clamp(22px, 3vw, 30px); letter-spacing: .02em; }
+.hero .sub { margin: 8px 0 0; font-size: 12.5px; opacity: .8; }
+.hero-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.pill {
+  display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 12px;
+  background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.32);
+}
+.date-select {
+  min-width: 180px; padding: 7px 10px; border-radius: 9px; font-size: 13px;
+  border: 1px solid rgba(255,255,255,.4); color: #fff; background: rgba(10,25,60,.35);
+}
+.date-select option { color: #16202f; background: #fff; }
+.meta-strip {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px;
+  margin: 14px 0 0;
+}
+.meta-strip > div {
+  padding: 11px 14px; border-radius: 12px; background: var(--card);
+  border: 1px solid var(--line);
+}
+.meta-strip span { display: block; font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+.meta-strip strong { font-size: 13px; font-weight: 600; }
+.toc {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; font-size: 12px;
+}
+.toc a {
+  padding: 5px 12px; border-radius: 999px; text-decoration: none;
+  color: var(--accent); background: var(--accent-soft); border: 1px solid transparent;
+}
+.toc a:hover { border-color: var(--accent); }
+.alert {
+  margin: 12px 0 0; padding: 11px 14px; border-radius: 12px; font-size: 12.5px;
+  color: var(--red); background: var(--red-soft); border: 1px solid color-mix(in srgb, var(--red) 30%, transparent);
+}
+.notice {
+  margin: 12px 0 0; padding: 11px 14px; border-radius: 12px; font-size: 12.5px;
+  color: var(--accent); background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+section { margin: 24px 0 0; }
+h2 {
+  display: flex; align-items: center; gap: 9px; margin: 0 0 12px;
+  font-size: 18px; letter-spacing: .01em;
+}
+h2 small { font-size: 11.5px; font-weight: 400; color: var(--muted); }
+.letter {
+  display: inline-grid; place-items: center; width: 27px; height: 27px; border-radius: 8px;
+  font-size: 13px; color: var(--accent); background: var(--accent-soft);
+}
+.note { margin: 0 0 10px; color: var(--muted); font-size: 12.5px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+.panel {
+  padding: 16px; border-radius: 14px; background: var(--card); border: 1px solid var(--line);
+}
+.panel h3 { margin: 0 0 10px; font-size: 14.5px; }
+.news {
+  padding: 12px 13px; margin: 0 0 9px; border-radius: 11px; background: var(--bg);
+  border: 1px solid var(--line);
+}
+.news:last-child { margin-bottom: 0; }
+.news h4 { margin: 0; font-size: 13.5px; line-height: 1.45; }
+.news h4 a { color: var(--text); text-decoration: none; }
+.news h4 a:hover { color: var(--accent); text-decoration: underline; }
+.news-meta { margin: 6px 0 0; font-size: 11.5px; color: var(--muted); }
+.news-summary { margin: 7px 0 0; font-size: 12.5px; color: var(--muted); }
+.muted { color: var(--muted); }
+.tag {
+  display: inline-block; padding: 1px 7px; border-radius: 6px; font-size: 10.5px;
+  color: var(--accent); background: var(--accent-soft);
+}
+.badge {
+  display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 11px;
+  font-weight: 600; white-space: nowrap;
+}
+.s-strengthen { color: var(--green); background: var(--green-soft); }
+.s-crowded { color: var(--orange); background: var(--orange-soft); }
+.s-weaken { color: var(--red); background: var(--red-soft); }
+.s-switch_candidate { color: var(--accent); background: var(--accent-soft); }
+.s-switch_confirmed { color: var(--purple); background: var(--purple-soft); }
+.s-observe, .s-none { color: var(--gray); background: var(--gray-soft); }
+.chips { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 10px; }
+.chip {
+  padding: 3px 9px; border-radius: 8px; font-size: 11.5px;
+  color: var(--muted); background: var(--card); border: 1px solid var(--line);
+}
+.chip b { color: var(--text); }
+.table-wrap { overflow-x: auto; border-radius: 13px; border: 1px solid var(--line); background: var(--card); }
+.limit-table { max-height: 460px; overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th, td { padding: 9px 11px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 11.5px; font-weight: 600; color: var(--muted); background: var(--bg); white-space: nowrap; }
+tbody tr:nth-child(even) { background: color-mix(in srgb, var(--bg) 55%, transparent); }
+tbody tr:last-child td { border-bottom: 0; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.card {
+  padding: 17px; border-radius: 15px; background: var(--card); border: 1px solid var(--line);
+}
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.card-head h3 { margin: 0; font-size: 14px; }
+.theme-name { margin: 10px 0 8px; font-size: 19px; }
+.metrics { display: flex; flex-wrap: wrap; gap: 6px 9px; font-size: 11.5px; color: var(--muted); }
+.metrics span { padding: 3px 8px; border-radius: 7px; background: var(--bg); }
+.metrics b { color: var(--text); font-weight: 600; }
+.conclusion { margin: 10px 0 0; font-size: 12.5px; color: var(--muted); }
+.basis { margin: 6px 0 0; font-size: 11px; color: var(--muted); }
+.switch-note { margin: 8px 0 0; font-size: 12px; color: var(--orange); }
+details {
+  margin-top: 12px; padding: 14px 16px; border-radius: 14px;
+  background: var(--card); border: 1px solid var(--line);
+}
+summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+details .table-wrap { margin-top: 12px; }
+.empty {
+  margin: 0; padding: 14px; border-radius: 10px; font-size: 12.5px;
+  color: var(--muted); background: var(--bg); border: 1px dashed var(--line);
+}
+footer {
+  margin-top: 30px; padding-top: 16px; border-top: 1px solid var(--line);
+  font-size: 11.5px; color: var(--muted);
+}
+footer p { margin: 4px 0; }
+@media (max-width: 640px) {
+  body { padding: 12px 10px 28px; }
+  .hero { padding: 19px 18px; }
+  .hero-side { align-items: flex-start; }
+  .metrics span { font-size: 11px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div>
+    <p class="eyebrow">MARKET MAINLINE DASHBOARD</p>
+    <h1>市场主线切换盘后看板</h1>
+    <p class="sub">交易时段每小时刷新 ｜ 三区块：政策研报 · 美股期货 · 三大方向</p>
+  </div>
+  <div class="hero-side">
+    <span class="pill">历史快照</span>
+    <select class="date-select" aria-label="选择日期" onchange="if(this.value){location.href=this.value}"><option value="../index.html" selected>最新 · 2026-11-03</option><option value="2026-11-02.html">2026-11-02（周一）</option><option value="2026-10-23.html">2026-10-23（周五）</option><option value="2026-10-22.html">2026-10-22（周四）</option><option value="2026-10-21.html">2026-10-21（周三）</option></select>
+  </div>
+</header>
+
+<div class="meta-strip">
+  <div><span>快照日期</span><strong>2026-11-03（周二）</strong></div>
+  <div><span>生成时间（北京时间）</span><strong>2026-11-03T23:53:19+08:00</strong></div>
+  <div><span>行情截至</span><strong>2026-11-03</strong></div>
+  <div><span>基准指数</span><strong>000300</strong></div>
+  <div><span>页面刷新</span><strong>历史归档</strong></div>
+</div>
+
+<nav class="toc">
+  <a href="#a">A 政策与研报</a><a href="#b">B 美股期货</a>
+  <a href="#c">C 三大方向</a>
+</nav>
+
+
+
+
+<section id="a">
+  <h2><span class="letter">A</span> 公开政策与研报</h2>
+  <p class="note">政策与研报仅保留公开链接，不抓取付费全文。</p>
+  <div class="grid2">
+    <div class="panel"><h3>政策（最多3条）</h3><article class="news"><h4><a href="http://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026110318093610834/index.html" target="_blank" rel="noopener noreferrer">中国人民银行行长潘功胜会见阿曼中央银行行长艾哈迈德·穆萨米</a></h4><p class="news-meta">中国人民银行 ｜ 2026-11-03 ｜ <span class="tag">中性</span> <span class="muted">影响主线：红利防御/高股息</span></p><p class="news-summary">2026年11月2日，中国人民银行行长潘功胜会见了阿曼中央银行行长艾哈迈德·穆萨米。双方就双边经济金融合作等议题交换了意见。 同日，在两国元首见证下，潘功胜行长和艾哈迈德行长签订了《人民币/阿曼里亚尔双边本币互换协议》和《加强数字支付和法定数字货币合作的谅解备忘录》。其中，《人民</p></article><article class="news"><h4><a href="http://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026110313380716818/index.html" target="_blank" rel="noopener noreferrer">证券、基金、保险公司互换便利（SFISF）操作结果公告 〔2026〕第1号</a></h4><p class="news-meta">中国人民银行 ｜ 2026-11-03 ｜ <span class="tag">中性</span> <span class="muted">影响主线：未匹配</span></p><p class="news-summary">根据参与机构需求情况，中国人民银行于2026年11月3日开展了证券、基金、保险公司互换便利操作。本次操作金额1000亿元，采用费率招标方式，31家证券、基金公司参与投标，中标费率为10bp。 中国人民银行公开市场业务操作室 二〇二六年十一月三日</p></article><article class="news"><h4><a href="http://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026110308254969050/index.html" target="_blank" rel="noopener noreferrer">中国人民银行决定上调金融机构外汇存款准备金率</a></h4><p class="news-meta">中国人民银行 ｜ 2026-11-03 ｜ <span class="tag">中性</span> <span class="muted">影响主线：未匹配</span></p><p class="news-summary">为加强金融机构外汇流动性管理，中国人民银行决定，自2026年11月15日起，上调金融机构外汇存款准备金率2个百分点，即外汇存款准备金率由现行的4%提高到6%。</p></article></div>
+    <div class="panel"><h3>研报（最多3条）</h3><article class="news"><h4><a href="https://data.eastmoney.com/report/zw_industry.jshtml?infocode=AP202611031831378349" target="_blank" rel="noopener noreferrer">生猪养殖行业W44周报：生猪价格有所回落，自繁自养亏损扩大</a></h4><p class="news-meta">万联证券 ｜ 2026-11-03 ｜ <span class="tag">利好</span> <span class="muted">影响主线：未匹配</span></p><p class="news-summary">养殖业｜增持｜万联证券</p></article><article class="news"><h4><a href="https://data.eastmoney.com/report/zw_industry.jshtml?infocode=AP202611031831378260" target="_blank" rel="noopener noreferrer">2025年中国生物创新药市场跟踪报告：呋喹替尼6月市场动向：海外销售同比+1825%，武田11.3亿美元授权下国产VEGFR抑制剂全球放量路径研判</a></h4><p class="news-meta">头豹研究院 ｜ 2026-11-03 ｜ <span class="tag">利好</span> <span class="muted">影响主线：医药/创新药</span></p><p class="news-summary">医药商业｜头豹研究院</p></article><article class="news"><h4><a href="https://data.eastmoney.com/report/zw_industry.jshtml?infocode=AP202611031831376708" target="_blank" rel="noopener noreferrer">零售社服行业周报：三季报业绩分化，服务消费持续修复</a></h4><p class="news-meta">华龙证券 ｜ 2026-11-03 ｜ <span class="tag">利好</span> <span class="muted">影响主线：消费/内需</span></p><p class="news-summary">酒店餐饮｜增持｜华龙证券</p></article></div>
+  </div>
+  <p class="note" style="margin-top:12px">今日催化计数</p>
+  <div class="chips"><span class="chip">AI算力/科技成长 <b>5</b></span><span class="chip">半导体/国产替代 <b>13</b></span><span class="chip">红利防御/高股息 <b>9</b></span><span class="chip">黄金/贵金属 <b>5</b></span><span class="chip">消费/内需 <b>2</b></span><span class="chip">医药/创新药 <b>3</b></span><span class="chip">出海/高端制造 <b>3</b></span><span class="chip">周期/资源 <b>7</b></span><span class="chip">军工/安全 <b>12</b></span></div>
+  <p class="note">近5日催化</p>
+  <div class="chips"><span class="chip">AI算力/科技成长 <b>6</b></span><span class="chip">半导体/国产替代 <b>17</b></span><span class="chip">红利防御/高股息 <b>9</b></span><span class="chip">黄金/贵金属 <b>5</b></span><span class="chip">消费/内需 <b>3</b></span><span class="chip">医药/创新药 <b>3</b></span><span class="chip">出海/高端制造 <b>3</b></span><span class="chip">周期/资源 <b>8</b></span><span class="chip">军工/安全 <b>12</b></span></div>
+</section>
+
+<section id="b">
+  <h2><span class="letter">B</span> 美股期货走势</h2>
+  <p class="note">仅描述外围环境，不构成对A股涨跌的预测。</p>
+  <div class="table-wrap"><table><thead><tr><th>品种</th><th>最新</th><th>涨跌幅</th><th>行情时间</th><th>对A股主线影响</th></tr></thead><tbody><tr><td>美元指数</td><td>101.82</td><td>+0.06%</td><td>2026-11-03 23:53:13</td><td>美元指数走强，对黄金/有色等美元计价品种偏压制。</td></tr><tr><td>美国10年期国债收益率</td><td>4.91%</td><td>-0.03pct</td><td>2026-11-02</td><td>美债10年期收益率下行，对高估值成长风格偏友好（单位：百分点）。</td></tr><tr><td>在岸人民币</td><td>6.6720</td><td>+0.36%</td><td>2026-11-03 23:51:01</td><td>人民币贬值，对出口链偏利好，进口成本上升。</td></tr><tr><td>富时中国A50期货</td><td>12,846.32</td><td>+0.53%</td><td>2026-11-03 23:53:10</td><td>A50期货上涨，反映外资对A股大盘的情绪改善。</td></tr><tr><td>纽约原油</td><td>95.47</td><td>-1.03%</td><td>2026-11-03 23:53:15</td><td>油价下行，对能源/周期偏压制，中下游成本端改善。</td></tr><tr><td>标普500期货</td><td>7,608.15</td><td>+0.44%</td><td>2026-11-03 23:53:16</td><td>美股期货走强，成长风格风险偏好偏暖（AI算力/半导体）。</td></tr><tr><td>纽约黄金</td><td>3,951.26</td><td>-0.46%</td><td>2026-11-03 23:53:16</td><td>金价下行，对黄金主线偏压制。</td></tr><tr><td>美铜</td><td>640.66</td><td>-2.45%</td><td>2026-11-03 23:53:17</td><td>铜价下行，对有色/周期偏压制。</td></tr><tr><td>纳斯达克期货</td><td>28,363.72</td><td>+0.84%</td><td>2026-11-03 23:53:17</td><td>美股期货走强，成长风格风险偏好偏暖（AI算力/半导体）。</td></tr><tr><td>道琼斯期货</td><td>52,017.70</td><td>-0.22%</td><td>2026-11-03 23:53:17</td><td>美股期货走弱，成长风格风险偏好承压（AI算力/半导体）。</td></tr></tbody></table></div>
+</section>
+
+<section id="c">
+  <h2><span class="letter">C</span> 三大方向</h2>
+  
+  <div class="cards"><section class="card direction"><div class="card-head"><h3>当前最强主线</h3><span class="badge s-observe">观察</span></div><h4 class="theme-name">消费/内需</h4><div class="metrics"><span>RS <b>+17.0%</b></span><span>量能 <b>1.24倍</b></span><span>龙头宽度 <b>+100%</b></span><span>催化 <b>3 条</b></span><span>涨停 <b>8/递减</b></span><span>载体 <b>指数 000932</b></span></div><p class="conclusion">RS +17.0%，量能 1.24倍，龙头宽度 100%，近5日催化 3条，涨停 8家/递减；状态观察。</p><p class="basis">选取依据：相对排名兜底 · RS 最高且为正</p></section><section class="card direction"><div class="card-head"><h3>潜在切换方向</h3><span class="badge s-observe">观察</span></div><h4 class="theme-name">出海/高端制造</h4><div class="metrics"><span>RS <b>+10.5%</b></span><span>量能 <b>1.23倍</b></span><span>龙头宽度 <b>+80%</b></span><span>催化 <b>3 条</b></span><span>涨停 <b>11/递增</b></span><span>载体 <b>龙头等权组合</b></span></div><p class="conclusion">RS +10.5%，量能 1.23倍，龙头宽度 80%，近5日催化 3条，涨停 11家/递增；状态观察。</p><p class="basis">选取依据：相对排名兜底 · 近3日RS改善最大</p></section><section class="card direction"><div class="card-head"><h3>走弱/风险方向</h3><span class="badge s-observe">观察</span></div><h4 class="theme-name">AI算力/科技成长</h4><div class="metrics"><span>RS <b>-25.4%</b></span><span>量能 <b>1.35倍</b></span><span>龙头宽度 <b>+0%</b></span><span>催化 <b>6 条</b></span><span>涨停 <b>1/递减</b></span><span>载体 <b>指数 399363</b></span></div><p class="conclusion">RS -25.4%，量能 1.35倍，龙头宽度 0%，近5日催化 6条，涨停 1家/递减；状态观察。</p><p class="basis">选取依据：相对排名兜底 · 5日跌幅最大</p></section></div>
+  <h3 style="margin:20px 0 8px;font-size:14px">切换雷达（仅列状态变化）</h3>
+  <p class="empty">今日无状态变化。</p>
+  <h3 style="margin:20px 0 8px;font-size:14px">涨停方向热度（仅作情绪验证）</h3>
+  <div class="table-wrap limit-table"><table><thead><tr><th>细分方向</th><th>今日涨停家数</th><th>连板家数</th><th>首板家数</th><th>近5日序列</th><th>近5日趋势</th><th>是否属于主线池</th><th>备注</th></tr></thead><tbody><tr><td>电池</td><td>7</td><td>1</td><td>6</td><td>0 → 0 → 0 → 1 → 7</td><td>递增</td><td>是（出海/高端制造）</td><td>—</td></tr><tr><td>一般零售</td><td>4</td><td>0</td><td>4</td><td>1 → 1 → 2 → 4 → 4</td><td>递增</td><td>是（消费/内需）</td><td>—</td></tr><tr><td>服装家纺</td><td>3</td><td>1</td><td>2</td><td>0 → 0 → 1 → 2 → 3</td><td>递增</td><td>否</td><td>—</td></tr><tr><td>游戏Ⅱ</td><td>3</td><td>3</td><td>0</td><td>1 → 1 → 0 → 7 → 3</td><td>递增</td><td>否</td><td>连续2日≥3家，未在主线池，进入候选观察</td></tr><tr><td>电网设备</td><td>2</td><td>0</td><td>2</td><td>2 → 0 → 0 → 1 → 2</td><td>递增</td><td>否</td><td>—</td></tr><tr><td>装修建材</td><td>2</td><td>0</td><td>2</td><td>0 → 0 → 2 → 0 → 2</td><td>持平</td><td>否</td><td>—</td></tr><tr><td>饮料乳品</td><td>2</td><td>0</td><td>2</td><td>0 → 1 → 2 → 1 → 2</td><td>持平</td><td>是（消费/内需）</td><td>—</td></tr><tr><td>专用设备</td><td>1</td><td>0</td><td>1</td><td>5 → 3 → 1 → 2 → 1</td><td>持平</td><td>是（出海/高端制造）</td><td>—</td></tr><tr><td>光伏设备</td><td>1</td><td>0</td><td>1</td><td>0 → 1 → 0 → 2 → 1</td><td>递增</td><td>是（出海/高端制造）</td><td>—</td></tr><tr><td>光学光电</td><td>1</td><td>0</td><td>1</td><td>1 → 1 → 1 → 2 → 1</td><td>持平</td><td>是（AI算力/科技成长、半导体/国产替代）</td><td>—</td></tr><tr><td>农产品加</td><td>1</td><td>1</td><td>0</td><td>0 → 1 → 1 → 1 → 1</td><td>持平</td><td>否</td><td>—</td></tr><tr><td>冶钢原料</td><td>1</td><td>0</td><td>1</td><td>0 → 0 → 0 → 0 → 1</td><td>递增</td><td>否</td><td>—</td></tr><tr><td>出版</td><td>1</td><td>1</td><td>0</td><td>0 → 0 → 0 → 8 → 1</td><td>递增</td><td>否</td><td>—</td></tr><tr><td>化学制品</td><td>1</td><td>1</td><td>0</td><td>3 → 0 → 0 → 3 → 1</td><td>递增</td><td>否</td><td>—</td></tr><tr><td>塑料</td><td>1</td><td>0</td><td>1</td><td>1 → 0 → 0 → 0 → 1</td><td>递增</td><td>否</td><td>—</td></tr><tr><td>工业金属</td><td>1</td><td>1</td><td>0</td><td>0 → 0 → 0 → 1 → 1</td><td>递增</td><td>是（周期/资源）</td><td>—</td></tr><tr><td>广告营销</td><td>1</td><td>0</td><td>1</td><td>0 → 0 → 1 → 9 → 1</td><td>持平</td><td>否</td><td>—</td></tr><tr><td>房地产开</td><td>1</td><td>0</td><td>1</td><td>1 → 0 → 2 → 0 → 1</td><td>递减</td><td>否</td><td>—</td></tr><tr><td>摩托车及</td><td>1</td><td>0</td><td>1</td><td>0 → 0 → 0 → 0 → 1</td><td>递增</td><td>否</td><td>—</td></tr><tr><td>文娱用品</td><td>1</td><td>1</td><td>0</td><td>1 → 1 → 0 → 1 → 1</td><td>递增</td><td>否</td><td>—</td></tr><tr><td>旅游及景</td><td>1</td><td>0</td><td>1</td><td>0 → 1 → 0 → 1 → 1</td><td>递增</td><td>是（消费/内需）</td><td>—</td></tr><tr><td>水泥</td><td>1</td><td>0</td><td>1</td><td>0 → 0 → 0 → 1 → 1</td><td>递增</td><td>否</td><td>—</td></tr><tr><td>汽车零部</td><td>1</td><td>1</td><td>0</td><td>11 → 2 → 0 → 4 → 1</td><td>递增</td><td>是（出海/高端制造）</td><td>—</td></tr><tr><td>照明设备</td><td>1</td><td>1</td><td>0</td><td>1 → 1 → 1 → 1 → 1</td><td>持平</td><td>否</td><td>—</td></tr><tr><td>玻璃玻纤</td><td>1</td><td>1</td><td>0</td><td>0 → 0 → 0 → 1 → 1</td><td>递增</td><td>否</td><td>—</td></tr><tr><td>电力</td><td>1</td><td>0</td><td>1</td><td>0 → 0 → 0 → 1 → 1</td><td>递增</td><td>是（红利防御/高股息）</td><td>—</td></tr><tr><td>白酒Ⅱ</td><td>1</td><td>1</td><td>0</td><td>0 → 0 → 4 → 3 → 1</td><td>递减</td><td>是（消费/内需）</td><td>—</td></tr><tr><td>纺织制造</td><td>1</td><td>1</td><td>0</td><td>0 → 0 → 0 → 3 → 1</td><td>递增</td><td>否</td><td>—</td></tr><tr><td>贸易Ⅱ</td><td>1</td><td>0</td><td>1</td><td>0 → 1 → 0 → 0 → 1</td><td>递增</td><td>否</td><td>—</td></tr><tr><td>通用设备</td><td>1</td><td>0</td><td>1</td><td>8 → 4 → 2 → 2 → 1</td><td>递减</td><td>是（出海/高端制造）</td><td>—</td></tr><tr><td>铁路公路</td><td>1</td><td>0</td><td>1</td><td>0 → 1 → 0 → 1 → 1</td><td>递增</td><td>是（红利防御/高股息）</td><td>—</td></tr><tr><td>饲料</td><td>1</td><td>0</td><td>1</td><td>1 → 0 → 0 → 0 → 1</td><td>递增</td><td>否</td><td>—</td></tr></tbody></table></div>
+  <details>
+    <summary>全部主线指标与状态</summary>
+    <div class="table-wrap"><table><thead><tr><th>主线</th><th>池</th><th>状态</th><th>RS</th><th>量能倍数</th><th>龙头宽度</th><th>龙头覆盖</th><th>催化(5日)</th><th>涨停(家)</th><th>5日涨幅</th><th>趋势</th><th>载体</th><th>备注</th></tr></thead><tbody><tr><td>AI算力/科技成长</td><td>核心池</td><td><span class="badge s-observe">观察</span></td><td>-25.4%</td><td>1.35</td><td>+0%</td><td>5/5</td><td>6</td><td>1</td><td>-13.3%</td><td>跌破20日线；5日线&lt;10日线</td><td>指数 399363</td><td>未满足强化/走弱/拥挤条件</td></tr><tr><td>消费/内需</td><td>核心池</td><td><span class="badge s-observe">观察</span></td><td>+17.0%</td><td>1.24</td><td>+100%</td><td>5/5</td><td>3</td><td>8</td><td>+6.4%</td><td>站上20日线；5日线&gt;10日线</td><td>指数 000932</td><td>未满足强化/走弱/拥挤条件</td></tr><tr><td>红利防御/高股息</td><td>核心池</td><td><span class="badge s-observe">观察</span></td><td>+10.6%</td><td>1.35</td><td>+100%</td><td>5/5</td><td>9</td><td>2</td><td>+1.4%</td><td>站上20日线；5日线&gt;10日线</td><td>指数 000015</td><td>未满足强化/走弱/拥挤条件</td></tr><tr><td>黄金/贵金属</td><td>核心池</td><td><span class="badge s-observe">观察</span></td><td>-3.9%</td><td>1.34</td><td>+0%</td><td>5/5</td><td>5</td><td>0</td><td>-7.5%</td><td>跌破20日线；5日线&lt;10日线</td><td>龙头等权组合</td><td>未满足强化/走弱/拥挤条件</td></tr><tr><td>医药/创新药</td><td>核心池</td><td><span class="badge s-observe">观察</span></td><td>+4.7%</td><td>0.97</td><td>+60%</td><td>5/5</td><td>3</td><td>0</td><td>+2.9%</td><td>跌破20日线；5/10金叉</td><td>指数 399265</td><td>未满足强化/走弱/拥挤条件</td></tr><tr><td>半导体/国产替代</td><td>核心池</td><td><span class="badge s-observe">观察</span></td><td>-22.2%</td><td>1.25</td><td>+20%</td><td>5/5</td><td>17</td><td>1</td><td>-8.8%</td><td>跌破20日线；5日线&lt;10日线</td><td>指数 980017</td><td>未满足强化/走弱/拥挤条件</td></tr><tr><td>周期/资源</td><td>观察池</td><td><span class="badge s-observe">观察</span></td><td>-6.4%</td><td>1.33</td><td>+40%</td><td>5/5</td><td>8</td><td>1</td><td>-4.0%</td><td>跌破20日线；5日线&lt;10日线</td><td>指数 000819</td><td>未满足强化/走弱/拥挤条件</td></tr><tr><td>军工/安全</td><td>观察池</td><td><span class="badge s-observe">观察</span></td><td>-1.2%</td><td>1.04</td><td>+60%</td><td>5/5</td><td>12</td><td>0</td><td>-0.8%</td><td>跌破20日线；5日线&lt;10日线</td><td>指数 399967</td><td>未满足强化/走弱/拥挤条件</td></tr><tr><td>出海/高端制造</td><td>观察池</td><td><span class="badge s-observe">观察</span></td><td>+10.5%</td><td>1.23</td><td>+80%</td><td>5/5</td><td>3</td><td>11</td><td>+5.9%</td><td>站上20日线；5日线&gt;10日线</td><td>龙头等权组合</td><td>未满足强化/走弱/拥挤条件</td></tr></tbody></table></div>
+  </details>
+</section>
+
+
+
+<footer>
+  <p>数据来源：中国政府网、央行、证监会、统计局、东方财富研报、华尔街见闻、腾讯/新浪行情、东方财富涨停池。</p>
+  <p>本看板仅用于研究与信息整理，不构成任何投资建议；不对涨跌做预测。</p>
+  <p>页面由 <code>publish.py</code> 从本地快照生成；数据刷新与推送由 Windows 计划任务在交易时段每小时执行。</p>
+</footer>
+
+</div>
+</body>
+</html>
