@@ -49,11 +49,14 @@ function Invoke-PythonStep {
         $process = Start-Process -FilePath $PythonPath -ArgumentList $Arguments `
             -WorkingDirectory $WorkingDir -Wait -PassThru -NoNewWindow `
             -RedirectStandardOutput $outFile -RedirectStandardError $errFile
-        if (Test-Path $outFile) {
-            Get-Content $outFile -Encoding UTF8 | Tee-Object -FilePath $LogPath -Append
-        }
-        if (Test-Path $errFile) {
-            Get-Content $errFile -Encoding UTF8 | Tee-Object -FilePath $LogPath -Append
+        # 注意不能用 Tee-Object：PS 5.1 下它按 UTF-16LE 写文件，
+        # 与 Write-Log 的 UTF-8 混在一个日志里会变成乱码，统一用 Add-Content -Encoding UTF8
+        foreach ($file in @($outFile, $errFile)) {
+            if (-not (Test-Path $file)) { continue }
+            $lines = @(Get-Content $file -Encoding UTF8)
+            if ($lines.Count -eq 0) { continue }
+            Add-Content -Path $LogPath -Value $lines -Encoding UTF8
+            $lines | ForEach-Object { Write-Host $_ }
         }
         if ($process.ExitCode -ne 0) {
             throw "$Title 失败（退出码 $($process.ExitCode)）"
@@ -70,8 +73,13 @@ function Invoke-Git {
     $previous = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        $output = & git @Arguments 2>&1 | Tee-Object -FilePath $LogPath -Append
+        $output = & git @Arguments 2>&1
         $script:LastGitExit = $LASTEXITCODE
+        $lines = @($output | ForEach-Object { $_.ToString() })
+        if ($lines.Count -gt 0) {
+            Add-Content -Path $LogPath -Value $lines -Encoding UTF8
+            $lines | ForEach-Object { Write-Host $_ }
+        }
         return $output
     }
     finally {
