@@ -381,9 +381,11 @@ def collect_all(
     config: dict[str, Any],
     themes: list[Theme],
     target_date: date,
+    news_end: date | None = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     start = target_date - timedelta(days=int(config.get("news_lookback_days", 7)))
-    end = target_date
+    # 新闻/快讯/国际要闻是实时流：最新快照可取到今天（含周末），历史归档仍按各自日期冻结。
+    end = news_end if news_end is not None else target_date
     failures: list[str] = []
     raw: list[dict[str, Any]] = []
 

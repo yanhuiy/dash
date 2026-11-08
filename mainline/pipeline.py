@@ -129,7 +129,10 @@ def run(
     trade_days = trade_days[-5:]
     window_dates = trade_days[-int(config.get("catalyst_window_days", 5)):]
 
-    news_items, news_failures = news.collect_all(config, themes, target)
+    # 新闻/国际要闻是实时流：当快照是最新交易日时，取到今天（含周末）；历史补跑仍按当日冻结。
+    latest_trade_day = max((d for d in calendar if d <= started.date()), default=None)
+    news_end = started.date() if (latest_trade_day is not None and target == latest_trade_day) else None
+    news_items, news_failures = news.collect_all(config, themes, target, news_end=news_end)
     failures.extend(news_failures)
 
     # 盘前/盘中基准行情尚未更新时，涨停池也按最近一个交易日收盘统计
