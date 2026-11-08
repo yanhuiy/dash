@@ -12,7 +12,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -53,6 +53,13 @@ def num(value: float | None, digits: int = 2, suffix: str = "") -> str:
     if value is None:
         return "—"
     return f"{value:.{digits}f}{suffix}"
+
+
+def pct_signless(value: float | None, digits: int = 0) -> str:
+    """不带正负号的百分比（用于龙头宽度 0%/60%/100%）。"""
+    if value is None:
+        return "—"
+    return f"{value * 100:.{digits}f}%"
 
 
 def split_themes(value: str | None) -> list[str]:
@@ -115,17 +122,45 @@ def table(headers: list[str], rows: list[list[str]], cls: str = "") -> str:
 # ---------------------------------------------------------------- 页面片段
 
 
-def render_date_switcher(dates: list[str], selected: str, is_archive: bool) -> str:
+def render_date_switcher(
+    dates: list[str], selected: str, is_archive: bool, trade_days: list[str] | None = None
+) -> str:
+    if not dates:
+        return ""
+    snapshot_set = set(dates)
+    trade_set = set(trade_days or [])
+    start = date.fromisoformat(dates[-1])
+    end = date.fromisoformat(dates[0])
+    full: list[str] = []
+    day = start
+    while day <= end:
+        full.append(day.isoformat())
+        day += timedelta(days=1)
+
+    def _gap_label(iso: str) -> str:
+        d = date.fromisoformat(iso)
+        if d.weekday() >= 5:
+            return "非交易日"
+        if iso in trade_set:
+            return "数据缺失"
+        return "非交易日"
+
     options = []
-    for item in dates:
-        if item == dates[0]:
-            value = "../index.html" if is_archive else "index.html"
-            label = f"最新 · {item}"
+    for item in full:
+        if item in snapshot_set:
+            if item == dates[0]:
+                value = "../index.html" if is_archive else "index.html"
+                label = f"最新 · {item}"
+            else:
+                value = f"{item}.html" if is_archive else f"date/{item}.html"
+                label = date_label(item)
+            disabled = ""
         else:
-            value = f"{item}.html" if is_archive else f"date/{item}.html"
-            label = date_label(item)
+            value = ""
+            label = f"{item} · {_gap_label(item)}"
+            disabled = " disabled"
         current = " selected" if item == selected else ""
-        options.append(f'<option value="{value}"{current}>{esc(label)}</option>')
+        options.append(f'<option value="{value}"{current}{disabled}>{esc(label)}</option>')
     return (
         '<select class="date-select" aria-label="选择日期" '
         "onchange=\"if(this.value){location.href=this.value}\">"
@@ -195,9 +230,14 @@ def render_direction_card(
         if basis
         else ""
     )
+    fb_badge = (
+        '<span class="badge s-none">兜底</span>'
+        if basis and str(basis).startswith("rs_")
+        else ""
+    )
     return (
         '<section class="card direction">'
-        f'<div class="card-head"><h3>{esc(label)}</h3>{status_badge(row.get("status"))}</div>'
+        f'<div class="card-head"><h3>{esc(label)}</h3>{status_badge(row.get("status"))}{fb_badge}</div>'
         f'<h4 class="theme-name">{esc(row.get("name"))}</h4>'
         '<div class="metrics">'
         f'<span>RS <b>{pct(row.get("rs"))}</b></span>'
@@ -235,7 +275,7 @@ def render_all_themes(themes: list[dict]) -> str:
                 status_badge(row["status"]),
                 pct(row["rs"]),
                 num(row["volume_ratio"]),
-                pct(row["breadth"], 0),
+                pct_signless(row["breadth"]),
                 f"{esc(row['breadth_covered'])}/{esc(extras.get('leaders_total', '—'))}",
                 esc(row["catalyst_count"]),
                 esc(row["limit_up_count"] if row["limit_up_count"] is not None else "—"),
@@ -252,31 +292,50 @@ def render_all_themes(themes: list[dict]) -> str:
     )
 
 
-def render_limit_up(rows: list[dict], theme_names: dict[str, str]) -> str:
-    data = []
+def render_limit_up(rows: list[dict], theme_names: dict[str, str], config: dict[str, Any]) -> str:
+    min_count = int(config.get("limit_up", {}).get("min_count_per_day", 3))
+    filter_default = bool(config.get("limit_up", {}).get("filter_default", True))
+    headers = ["细分方向", "今日涨停家数", "连板家数", "首板家数", "近5日序列", "近5日趋势",
+               "是否属于主线池", "备注"]
+    body_rows = []
     for row in rows:
         try:
             series = json.loads(row["series_json"]) if row.get("series_json") else []
         except (TypeError, ValueError):
             series = []
+        in_pool = bool(row["in_theme_pool"])
+        tail = [v for v in series[-2:] if v is not None]
+        is_candidate = (not in_pool) and len(tail) == 2 and all(v >= min_count for v in tail)
+        extra = "" if (in_pool or is_candidate) else ' class="filter-hidden" data-extra="1"'
         names = "、".join(theme_names.get(tid, tid) for tid in split_themes(row["theme_ids"]))
-        data.append(
-            [
-                esc(row["sector"]),
-                esc(row["count"]),
-                esc(row["lianban"]),
-                esc(row["first_board"]),
-                esc(" → ".join("—" if value is None else str(value) for value in series)),
-                esc(row["trend"]),
-                esc(f"是（{names}）" if row["in_theme_pool"] else "否"),
-                esc(row["note"] or "—"),
-            ]
+        body_rows.append(
+            f"<tr{extra}>"
+            f"<td>{esc(row['sector'])}</td>"
+            f"<td>{esc(row['count'])}</td>"
+            f"<td>{esc(row['lianban'])}</td>"
+            f"<td>{esc(row['first_board'])}</td>"
+            f"<td>{esc(' → '.join('—' if v is None else str(v) for v in series))}</td>"
+            f"<td>{esc(row['trend'])}</td>"
+            f"<td>{esc(f'是（{names}）' if in_pool else '否')}</td>"
+            f"<td>{esc(row['note'] or '—')}</td>"
+            "</tr>"
         )
-    return table(
-        ["细分方向", "今日涨停家数", "连板家数", "首板家数", "近5日序列", "近5日趋势",
-         "是否属于主线池", "备注"],
-        data,
-        cls="limit-table",
+    if not body_rows:
+        return '<p class="empty">涨停源今日缺失，或当日无涨停数据。</p>'
+    head = "".join(f"<th>{esc(h)}</th>" for h in headers)
+    toolbar = (
+        '<div class="limit-toolbar">'
+        '<label><input type="checkbox" id="lu-show-all"'
+        f"{'' if filter_default else ' checked'}> 显示全部（含非主线池方向）</label>"
+        "</div>"
+    )
+    return (
+        toolbar
+        + '<div class="table-wrap limit-table"><table id="lu-table"><thead><tr>'
+        + head
+        + "</tr></thead><tbody>"
+        + "".join(body_rows)
+        + "</tbody></table></div>"
     )
 
 
@@ -293,6 +352,108 @@ def render_holdings(rows: list[dict]) -> str:
         for row in rows
     ]
     return table(["代码", "名称", "对应主线", "该主线今日状态", "风险备注", "映射状态"], data)
+
+
+def _dedupe_news(items: list[dict]) -> list[dict]:
+    seen: set[str] = set()
+    out: list[dict] = []
+    for item in items:
+        key = item.get("event_key") or item.get("url") or item.get("title")
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(item)
+    return out
+
+
+def render_today_bishop(
+    items: list[dict], theme_names: dict[str, str], config: dict[str, Any]
+) -> str:
+    cfg = config.get("news") or {}
+    limit = int(cfg.get("today_bishop_limit", 3))
+    max_per_theme = int(cfg.get("today_bishop_max_per_theme", 2))
+    pool = [
+        item for item in items
+        if item.get("matched_themes")
+        and item.get("category") in ("policy", "research", "international")
+    ]
+    if not pool:
+        return '<p class="empty">今日暂无命中主线的政策/研报/国际要闻。</p>'
+    order = {"likely_positive": 0, "negative": 0, "uncertain": 1, "neutral": 2}
+    pool.sort(key=lambda item: item.get("published_at", ""), reverse=True)
+    pool.sort(key=lambda item: (
+        -int(item.get("source_weight") or 1),
+        order.get(item.get("sentiment"), 2),
+    ))
+    chosen: list[dict] = []
+    used: dict[str, int] = {}
+    for item in pool:
+        if len(chosen) >= limit:
+            break
+        primary = (item.get("matched_themes") or "").split(",")[0]
+        if used.get(primary, 0) >= max_per_theme:
+            continue
+        chosen.append(item)
+        used[primary] = used.get(primary, 0) + 1
+    return "".join(render_news(item, theme_names) for item in chosen)
+
+
+def render_international(
+    items: list[dict], theme_names: dict[str, str], config: dict[str, Any]
+) -> str:
+    cfg = config.get("news") or {}
+    limit = int(cfg.get("international_limit", 5))
+    pool = [item for item in items if item.get("category") == "international"]
+    pool.sort(key=lambda item: item.get("published_at", ""), reverse=True)
+    if not pool:
+        return '<p class="empty">今日无命中催化词的国际要闻。</p>'
+    return "".join(render_news(item, theme_names) for item in pool[:limit])
+
+
+def render_catalyst(
+    themes: list[dict],
+    theme_names: dict[str, str],
+    catalyst_today: dict[str, int],
+    catalyst_5d: dict[str, int],
+    news_items: list[dict],
+    selected: str,
+    window_dates: list[str],
+) -> tuple[str, str]:
+    today_days = {selected}
+    five_days = set(window_dates) if window_dates else {selected}
+
+    def _group(theme_id: str, days: set[str]) -> list[dict]:
+        return [
+            item for item in news_items
+            if theme_id in split_themes(item.get("matched_themes"))
+            and item.get("published_at", "")[:10] in days
+        ]
+
+    def _chips(counts: dict[str, int], days: set[str], prefix: str) -> str:
+        parts: list[str] = []
+        for idx, theme in enumerate(themes):
+            theme_id = theme["theme_id"]
+            count = counts.get(theme_id, 0)
+            detail_id = f"{prefix}-{idx}"
+            parts.append(
+                f'<span class="chip chip-toggle" data-target="{detail_id}">'
+                f"{esc(theme_names.get(theme_id, theme_id))} <b>{esc(count)}</b></span>"
+            )
+            detail = "".join(
+                render_news(item, theme_names) for item in _dedupe_news(_group(theme_id, days))
+            )
+            empty_html = '<p class="empty">该主线无命中条目。</p>'
+            parts.append(
+                f'<div class="chip-detail" id="{detail_id}">'
+                f"{detail or empty_html}"
+                "</div>"
+            )
+        return "".join(parts)
+
+    return (
+        _chips(catalyst_today, today_days, "cat-t"),
+        _chips(catalyst_5d, five_days, "cat-f"),
+    )
 
 
 # ---------------------------------------------------------------- 主页面
@@ -320,6 +481,9 @@ def build_page(
     include_holdings = bool(config.get("publish", {}).get("include_holdings", True))
     refresh_seconds = int(config.get("publish", {}).get("auto_refresh_seconds", 600))
     site_title = str(config.get("publish", {}).get("site_title", "市场主线切换盘后看板"))
+    default_tab = str(config.get("publish", {}).get("default_tab", "mainline"))
+    if default_tab not in ("news", "mainline"):
+        default_tab = "mainline"
 
     display = payload.get("display") or {}
     policy_items = pick_items(
@@ -329,23 +493,19 @@ def build_page(
         news_items, "research", display.get("research", []), int(config.get("display_max_research", 3))
     )
     policy_html = "".join(render_news(item, theme_names) for item in policy_items) or (
-        '<p class="empty">今日无新增政策条目（该源今日缺失或未更新）</p>'
+        '<p class="empty">今日无命中政策（无政策条目命中主线催化词）</p>'
     )
     research_html = "".join(render_news(item, theme_names) for item in research_items) or (
-        '<p class="empty">今日无新增研报条目（该源今日缺失或未更新）</p>'
+        '<p class="empty">今日无命中研报（无研报在标题+摘要+行业标签至少两维命中主线）</p>'
     )
+    bishop_html = render_today_bishop(news_items, theme_names, config)
+    international_html = render_international(news_items, theme_names, config)
 
     catalyst_today = payload.get("catalyst_today") or {}
     catalyst_5d = payload.get("catalyst_5d") or {}
-    today_chips = "".join(
-        f'<span class="chip">{esc(theme_names.get(tid, tid))} <b>{esc(count)}</b></span>'
-        for tid, count in catalyst_today.items()
-        if count
-    ) or '<span class="muted">无命中催化词的新增条目</span>'
-    five_day_chips = "".join(
-        f'<span class="chip">{esc(theme_names.get(tid, tid))} <b>{esc(count)}</b></span>'
-        for tid, count in catalyst_5d.items()
-        if count
+    catalyst_today_html, catalyst_5d_html = render_catalyst(
+        themes, theme_names, catalyst_today, catalyst_5d, news_items,
+        selected, payload.get("window_dates") or [],
     )
 
     quote_rows = [
@@ -383,6 +543,14 @@ def build_page(
                                   basis.get("weakening"), switch_meta, theme_names),
         ]
     )
+    any_status_dir = any(
+        str(basis.get(key)) == "status" for key in ("strongest", "switching", "weakening")
+    )
+    directions_fallback_html = (
+        ""
+        if any_status_dir
+        else '<div class="notice">今日无主线触发强化/走弱/拥挤，以下三大方向为相对排名兜底。</div>'
+    )
 
     radar = payload.get("radar") or []
     radar_rows = [
@@ -391,12 +559,13 @@ def build_page(
             status_badge(row["prev"]),
             status_badge(row["curr"]),
             esc(row["change_type"]),
+            esc(row.get("reason") or row.get("detail") or "—"),
             esc(row["detail"]),
         ]
         for row in radar
     ]
     if radar:
-        radar_html = table(["主线", "昨日状态", "今日状态", "类型", "说明"], radar_rows)
+        radar_html = table(["主线", "昨日状态", "今日状态", "类型", "变化原因", "说明"], radar_rows)
     elif payload.get("prev_date"):
         radar_html = '<p class="empty">今日无状态变化。</p>'
     else:
@@ -410,11 +579,10 @@ def build_page(
     )
 
     baseline_last = str(payload.get("baseline_last_date") or selected)
-    premarket_html = ""
+    stale_html = ""
     if baseline_last < selected:
-        premarket_html = (
-            f'<div class="notice">盘前/盘中快照：行情尚未更新到 {esc(selected)}，'
-            f"当前指标基于 {esc(baseline_last)} 收盘数据，涨停热度同为该日。</div>"
+        stale_html = (
+            f'<div class="stale-alert">行情未更新到当日，指标基于 {esc(baseline_last)} 收盘数据。</div>'
         )
 
     latest = dates[0] if dates else selected
@@ -425,18 +593,19 @@ def build_page(
     holdings_section = ""
     if include_holdings:
         holdings_section = f"""
-<section id="d">
-  <h2><span class="letter">D</span> 持仓备注 <small>纯展示，不参与计算</small></h2>
-  {render_holdings(holdings) if holdings else '<p class="empty">holdings.yaml 未配置持仓。</p>'}
-</section>"""
+  <h2>持仓备注 <small>纯展示，不参与计算</small></h2>
+  {render_holdings(holdings) if holdings else '<p class="empty">holdings.yaml 未配置持仓。</p>'}"""
 
     refresh_meta = (
         f'<meta http-equiv="refresh" content="{refresh_seconds}">'
         if not is_archive and refresh_seconds > 0
         else ""
     )
+    minutes = max(refresh_seconds // 60, 1)
+    refresh_note_template = str(config.get("publish", {}).get(
+        "refresh_data_note", "页面每{minutes}分钟自动重载；数据由计划任务定时更新"))
     refresh_text = (
-        f"每 {max(refresh_seconds // 60, 1)} 分钟自动重载"
+        refresh_note_template.replace("{minutes}", str(minutes))
         if not is_archive and refresh_seconds > 0
         else "历史归档"
     )
@@ -444,11 +613,51 @@ def build_page(
     generated_at = data.get("generated_at") or payload.get("generated_at") or "—"
     baseline = payload.get("baseline_index") or "—"
 
-    # 副标题按实际渲染的区块数生成，避免关掉 D 区块后仍写“四区块/持仓备注”
-    block_names = ["政策研报", "美股期货", "三大方向"]
-    if include_holdings:
-        block_names.append("持仓备注")
-    sub_label = f"{'四' if include_holdings else '三'}区块：" + " · ".join(block_names)
+    sub_label = "两个 Tab：新闻与催化 ｜ 主线与方向"
+
+    limit_up_html = (
+        render_limit_up(limit_rows, theme_names, config)
+        if limit_rows
+        else '<p class="empty">涨停源今日缺失，或当日无涨停数据。</p>'
+    )
+
+    page_script = (
+        "(function(){\n"
+        "  var tabs=document.querySelectorAll('.tab');\n"
+        "  function switchTab(name){\n"
+        "    for(var i=0;i<tabs.length;i++){tabs[i].classList.toggle('active',tabs[i].getAttribute('data-tab')===name);}\n"
+        "    var panes=document.querySelectorAll('.tabpane');\n"
+        "    for(var j=0;j<panes.length;j++){panes[j].classList.toggle('active',panes[j].id==='tab-'+name);}\n"
+        "    if(location.hash!=='#'+name){history.replaceState(null,'','#'+name);}\n"
+        "  }\n"
+        "  function initTab(){\n"
+        "    var h=location.hash.replace('#','');\n"
+        "    var v=(h==='news'||h==='mainline');\n"
+        "    switchTab(v?h:'__DEFAULT__');\n"
+        "  }\n"
+        "  for(var i=0;i<tabs.length;i++){\n"
+        "    tabs[i].addEventListener('click',function(){switchTab(this.getAttribute('data-tab'));});\n"
+        "  }\n"
+        "  window.addEventListener('hashchange',function(){\n"
+        "    var h=location.hash.replace('#','');\n"
+        "    if(h==='news'||h==='mainline'){switchTab(h);}\n"
+        "  });\n"
+        "  initTab();\n"
+        "  var lu=document.getElementById('lu-show-all');\n"
+        "  function applyLu(){\n"
+        "    if(!lu){return;}\n"
+        "    var rows=document.querySelectorAll('#lu-table tbody tr[data-extra=\"1\"]');\n"
+        "    for(var i=0;i<rows.length;i++){rows[i].classList.toggle('filter-hidden',!lu.checked);}\n"
+        "  }\n"
+        "  if(lu){lu.addEventListener('change',applyLu);applyLu();}\n"
+        "  document.addEventListener('click',function(e){\n"
+        "    var t=e.target.closest?e.target.closest('.chip-toggle'):null;\n"
+        "    if(!t){return;}\n"
+        "    var d=document.getElementById(t.getAttribute('data-target'));\n"
+        "    if(d){d.classList.toggle('open');}\n"
+        "  });\n"
+        "})();"
+    ).replace("__DEFAULT__", default_tab)
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -621,6 +830,31 @@ footer p {{ margin: 4px 0; }}
   .hero-side {{ align-items: flex-start; }}
   .metrics span {{ font-size: 11px; }}
 }}
+.tabbar {{
+  display: flex; gap: 8px; margin: 14px 0 4px; padding-bottom: 2px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch; border-bottom: 2px solid var(--line);
+}}
+.tab {{
+  flex: 0 0 auto; padding: 9px 16px; border: none; background: transparent; cursor: pointer;
+  font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+}}
+.tab:hover {{ color: var(--accent); }}
+.tab.active {{ color: var(--accent); border-bottom-color: var(--accent); }}
+.tabpane {{ display: none; }}
+.tabpane.active {{ display: block; }}
+.stale-alert {{
+  margin: 12px 0 0; padding: 11px 14px; border-radius: 12px; font-size: 12.5px;
+  color: var(--red); background: var(--red-soft);
+  border: 1px solid color-mix(in srgb, var(--red) 30%, transparent);
+}}
+.chip-toggle {{ cursor: pointer; user-select: none; }}
+.chip-toggle:hover {{ border-color: var(--accent); color: var(--accent); }}
+.chip-detail {{ display: none; width: 100%; margin: 2px 0 10px; }}
+.chip-detail.open {{ display: block; }}
+.filter-hidden {{ display: none; }}
+.limit-toolbar {{ margin: 0 0 10px; font-size: 12.5px; color: var(--muted); }}
+.limit-toolbar label {{ cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }}
 </style>
 </head>
 <body>
@@ -630,11 +864,11 @@ footer p {{ margin: 4px 0; }}
   <div>
     <p class="eyebrow">MARKET MAINLINE DASHBOARD</p>
     <h1>{esc(site_title)}</h1>
-    <p class="sub">交易时段每小时刷新 ｜ {sub_label}</p>
+    <p class="sub">{esc(refresh_text)} ｜ {sub_label}</p>
   </div>
   <div class="hero-side">
     <span class="pill">{mode}</span>
-    {render_date_switcher(dates, selected, is_archive)}
+    {render_date_switcher(dates, selected, is_archive, payload.get("trade_days"))}
   </div>
 </header>
 
@@ -646,56 +880,81 @@ footer p {{ margin: 4px 0; }}
   <div><span>页面刷新</span><strong>{esc(refresh_text)}</strong></div>
 </div>
 
-<nav class="toc">
-  <a href="#a">A 政策与研报</a><a href="#b">B 美股期货</a>
-  <a href="#c">C 三大方向</a>{'<a href="#d">D 持仓备注</a>' if include_holdings else ''}
+<nav class="tabbar">
+  <button type="button" class="tab" data-tab="mainline">主线与方向</button>
+  <button type="button" class="tab" data-tab="news">新闻与催化</button>
 </nav>
 
 {failure_html}
-{premarket_html}
+{stale_html}
 
-<section id="a">
-  <h2><span class="letter">A</span> 公开政策与研报</h2>
-  <p class="note">政策与研报仅保留公开链接，不抓取付费全文。</p>
-  <div class="grid2">
-    <div class="panel"><h3>政策（最多3条）</h3>{policy_html}</div>
-    <div class="panel"><h3>研报（最多3条）</h3>{research_html}</div>
-  </div>
-  <p class="note" style="margin-top:12px">今日催化计数</p>
-  <div class="chips">{today_chips}</div>
-  <p class="note">近5日催化</p>
-  <div class="chips">{five_day_chips or '<span class="muted">暂无</span>'}</div>
-</section>
+<div class="tabpane active" id="tab-mainline">
+  <section>
+    <h2><span class="letter">A</span> 美股期货走势</h2>
+    <p class="note">仅描述外围环境，不构成对A股涨跌的预测。</p>
+    {quotes_html}
+  </section>
 
-<section id="b">
-  <h2><span class="letter">B</span> 美股期货走势</h2>
-  <p class="note">仅描述外围环境，不构成对A股涨跌的预测。</p>
-  {quotes_html}
-</section>
+  <section>
+    <h2><span class="letter">B</span> 三大方向</h2>
+    {directions_fallback_html}
+    {switch_note}
+    <div class="cards">{card_html}</div>
+    <h3 style="margin:20px 0 8px;font-size:14px">切换雷达（仅列状态变化）</h3>
+    {radar_html}
+    <details>
+      <summary>全部主线指标与状态</summary>
+      {render_all_themes(themes)}
+    </details>
+  </section>
 
-<section id="c">
-  <h2><span class="letter">C</span> 三大方向</h2>
-  {switch_note}
-  <div class="cards">{card_html}</div>
-  <h3 style="margin:20px 0 8px;font-size:14px">切换雷达（仅列状态变化）</h3>
-  {radar_html}
-  <h3 style="margin:20px 0 8px;font-size:14px">涨停方向热度（仅作情绪验证）</h3>
-  {render_limit_up(limit_rows, theme_names) if limit_rows else '<p class="empty">涨停源今日缺失，或当日无涨停数据。</p>'}
-  <details>
-    <summary>全部主线指标与状态</summary>
-    {render_all_themes(themes)}
-  </details>
-</section>
+  {holdings_section}
+</div>
 
-{holdings_section}
+<div class="tabpane" id="tab-news">
+  <section>
+    <h2><span class="letter">A</span> 今日必看</h2>
+    {bishop_html}
+  </section>
+
+  <section>
+    <h2><span class="letter">B</span> 公开政策与研报</h2>
+    <p class="note">政策与研报仅保留公开链接，不抓取付费全文。</p>
+    <div class="grid2">
+      <div class="panel"><h3>政策（最多3条）</h3>{policy_html}</div>
+      <div class="panel"><h3>研报（最多3条）</h3>{research_html}</div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="letter">C</span> 隔夜国际要闻</h2>
+    {international_html}
+  </section>
+
+  <section>
+    <h2><span class="letter">D</span> 催化计数</h2>
+    <p class="note">同一事件多源只计一次；未命中主线显示 0。点计数可展开该主线条目。</p>
+    <p class="note" style="margin-top:4px">今日</p>
+    <div class="chips">{catalyst_today_html}</div>
+    <p class="note" style="margin-top:8px">近5日</p>
+    <div class="chips">{catalyst_5d_html}</div>
+  </section>
+
+  <section>
+    <h2><span class="letter">E</span> 涨停方向热度</h2>
+    <p class="note">仅作情绪验证，不参与核心判定。默认只显示主线池与连续两日候选方向。</p>
+    {limit_up_html}
+  </section>
+</div>
 
 <footer>
   <p>数据来源：中国政府网、央行、证监会、统计局、东方财富研报、华尔街见闻、腾讯/新浪行情、东方财富涨停池。</p>
   <p>本看板仅用于研究与信息整理，不构成任何投资建议；不对涨跌做预测。</p>
-  <p>页面由 <code>publish.py</code> 从本地快照生成；数据刷新与推送由 Windows 计划任务在交易时段每小时执行。</p>
+  <p>{esc(refresh_text)}。页面由 <code>publish.py</code> 从本地快照生成。</p>
 </footer>
 
 </div>
+<script>{page_script}</script>
 </body>
 </html>
 """

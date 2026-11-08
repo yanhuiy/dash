@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS news_items (
     sentiment TEXT,
     url TEXT,
     event_key TEXT,
+    source_weight INTEGER,
     PRIMARY KEY (date, category, url)
 );
 
@@ -105,6 +106,11 @@ def connect(path: str | Path) -> sqlite3.Connection:
 
 def init_db(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+    # 兼容旧库：news_items 若缺少 source_weight 列则补充
+    try:
+        conn.execute("ALTER TABLE news_items ADD COLUMN source_weight INTEGER")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
 
 
@@ -154,10 +160,10 @@ def save_day(
             """
             INSERT INTO news_items (
                 date, category, title, source, published_at, summary,
-                matched_themes, sentiment, url, event_key
+                matched_themes, sentiment, url, event_key, source_weight
             ) VALUES (
                 :date, :category, :title, :source, :published_at, :summary,
-                :matched_themes, :sentiment, :url, :event_key
+                :matched_themes, :sentiment, :url, :event_key, :source_weight
             )
             """,
             news_rows,

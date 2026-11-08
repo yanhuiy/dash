@@ -150,15 +150,18 @@ def build_radar(
     statuses: dict[str, str],
     prev_themes: dict[str, dict],
     switch_meta: dict[str, Any] | None,
+    reasons: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     if not prev_themes:
         return []
+    reasons = reasons or {}
     rows: list[dict[str, Any]] = []
     for theme_id, state in statuses.items():
         prev = prev_themes.get(theme_id, {}).get("status")
         if prev is None or prev == state:
             continue
         detail = conclusion(metrics[theme_id], state)
+        reason = reasons.get(theme_id) or detail
         if switch_meta and theme_id == switch_meta.get("new"):
             old_name = metrics[switch_meta["old"]]["name"]
             confirm_days = int(switch_meta.get("confirm_days", 2))
@@ -167,7 +170,8 @@ def build_radar(
                 if switch_meta.get("confirmed")
                 else "首日成立，待确认"
             )
-            detail = f"{metrics[theme_id]['name']}强化 + {old_name}走弱，{verdict}。"
+            reason = f"{metrics[theme_id]['name']}强化 + {old_name}走弱，{verdict}。"
+            detail = reason
         rows.append(
             {
                 "theme_id": theme_id,
@@ -175,6 +179,7 @@ def build_radar(
                 "prev": prev,
                 "curr": state,
                 "change_type": CHANGE_LABELS.get(state, "状态变化"),
+                "reason": reason,
                 "detail": detail,
             }
         )

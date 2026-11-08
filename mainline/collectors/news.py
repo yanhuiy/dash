@@ -228,12 +228,15 @@ def fetch_research(start: date, end: date) -> list[dict[str, Any]]:
     return items[:60]
 
 
-def fetch_wallstreetcn(start: date, end: date) -> list[dict[str, Any]]:
-    url = (
-        "https://api-one-wscn.awtmt.com/apiv1/content/lives"
-        "?channel=global-channel&client=pc&limit=100"
-    )
-    payload = _get(url).json()
+WSCN_URL = (
+    "https://api-one-wscn.awtmt.com/apiv1/content/lives"
+    "?channel=global-channel&client=pc&limit=100"
+)
+
+
+def _fetch_wscn_raw(start: date, end: date) -> list[dict[str, Any]]:
+    """拉取华尔街见闻全球快讯原始条目（未定 category），供快讯/国际要闻复用。"""
+    payload = _get(WSCN_URL).json()
     items: list[dict[str, Any]] = []
     for row in (payload.get("data") or {}).get("items") or []:
         text = _clean(row.get("content_text", ""))
@@ -248,7 +251,6 @@ def fetch_wallstreetcn(start: date, end: date) -> list[dict[str, Any]]:
         title = _clean(row.get("highlight_title") or text[:60])
         items.append(
             {
-                "category": "news",
                 "title": title,
                 "source": "华尔街见闻",
                 "published_at": pub_dt.strftime("%Y-%m-%d %H:%M"),
@@ -257,6 +259,10 @@ def fetch_wallstreetcn(start: date, end: date) -> list[dict[str, Any]]:
             }
         )
     return items[:80]
+
+
+def fetch_wallstreetcn(start: date, end: date) -> list[dict[str, Any]]:
+    return [{**item, "category": "news"} for item in _fetch_wscn_raw(start, end)]
 
 
 def classify_sentiment(text: str) -> str:
@@ -277,16 +283,45 @@ MATCH_NOISE = [
 ]
 
 
-def match_themes(text: str, themes: list[Theme]) -> dict[str, int]:
-    """按催化词命中数匹配主线；先剔除机构名，避免“人民银行→银行”这类误命中。"""
+def _strip_noise(text: str) -> str:
     for noise in MATCH_NOISE:
         text = text.replace(noise, "")
+    return text
+
+
+def match_themes(text: str, themes: list[Theme]) -> dict[str, int]:
+    """按催化词命中数匹配主线；先剔除机构名，避免“人民银行→银行”这类误命中。"""
+    text = _strip_noise(text)
     hits: dict[str, int] = {}
     lowered = text.lower()
     for theme in themes:
         count = sum(1 for word in theme.catalyst_words if word.lower() in lowered)
         if count:
             hits[theme.id] = count
+    return hits
+
+
+def _match_words(text: str, words: list[str]) -> bool:
+    lowered = text.lower()
+    return any(word.lower() in lowered for word in words)
+
+
+def match_research(
+    title: str, summary: str, industry: str, themes: list[Theme], min_dims: int = 2
+) -> dict[str, int]:
+    """研报三重命中：标题、摘要、行业标签三个维度，至少 min_dims 维命中才算匹配；
+    命中值记录为命中维度数，避免单个词误配（如“伊朗战争对电力设备”→半导体）。"""
+    hits: dict[str, int] = {}
+    fields = [
+        _strip_noise(title).lower(),
+        _strip_noise(summary).lower(),
+        (industry or "").lower(),
+    ]
+    for theme in themes:
+        words = [word.lower() for word in theme.catalyst_words]
+        dims = sum(1 for field in fields if any(word in field for word in words))
+        if dims >= min_dims:
+            hits[theme.id] = dims
     return hits
 
 
@@ -382,12 +417,31 @@ def collect_all(
         except Exception as exc:
             failures.append(f"快讯源 华尔街见闻: {type(exc).__name__}")
 
-    # 去重 URL
-    deduped: dict[str, dict[str, Any]] = {}
+    # 隔夜国际要闻：复用华尔街见闻全球快讯，按国际催化词过滤
+    international_enabled = bool(config.get("news", {}).get("international_enabled", True))
+    if (
+        international_enabled
+        and "wallstreetcn_intl" in set(config["sources"].get("international", []))
+    ):
+        intl_words = [str(w) for w in (config.get("catalyst_words_international") or [])]
+        intl_items = [
+            {**item, "category": "international"}
+            for item in _fetch_wscn_raw(start, end)
+            if _match_words(f"{item['title']} {item.get('summary', '')}", intl_words)
+        ]
+        if not intl_items:
+            failures.append("国际要闻: 今日无命中国际催化词的条目")
+        raw.extend(intl_items)
+
+    source_weights = (config.get("news") or {}).get("source_weights") or {}
+    research_min_dims = int((config.get("news") or {}).get("research_match_min_dims", 2))
+
+    # 按 (category, url) 去重，允许同一 URL 分属快讯与国际两个分类
+    deduped: dict[tuple[str, str], dict[str, Any]] = {}
     for item in raw:
         if not item.get("url") or not item.get("title"):
             continue
-        deduped.setdefault(item["url"], item)
+        deduped.setdefault((item["category"], item["url"]), item)
 
     items: list[dict[str, Any]] = []
     for item in deduped.values():
@@ -397,14 +451,22 @@ def collect_all(
             continue
         if pub_date < start:
             continue
+        category = item["category"]
         text = f"{item['title']} {item.get('summary', '')}"
-        if item["category"] == "research" and item.get("industry"):
-            text += " " + item["industry"]
-        hits = match_themes(text, themes)
-        # 快讯只保留命中催化词的条目
-        if item["category"] == "news" and not hits:
+        if category == "research":
+            hits = match_research(
+                item["title"],
+                item.get("summary", ""),
+                item.get("industry", ""),
+                themes,
+                min_dims=research_min_dims,
+            )
+        else:
+            hits = match_themes(text, themes)
+        # 政策/研报/快讯只保留命中主线催化词的条目；国际要闻已按国际词过滤，保留全部
+        if category in ("policy", "research", "news") and not hits:
             continue
-        if item["category"] == "research" and item.get("rating"):
+        if category == "research" and item.get("rating"):
             if any(word in item["rating"] for word in ("买入", "增持", "推荐", "强推", "优于大市")):
                 sentiment = "likely_positive"
             elif any(word in item["rating"] for word in ("减持", "卖出", "回避")):
@@ -415,6 +477,7 @@ def collect_all(
             sentiment = classify_sentiment(text)
         item["matched_themes"] = ",".join(sorted(hits, key=lambda k: -hits[k]))
         item["sentiment"] = sentiment
+        item["source_weight"] = int(source_weights.get(item["source"], 1))
         items.append(item)
 
     assign_event_keys(items)

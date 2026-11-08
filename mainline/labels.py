@@ -10,15 +10,15 @@ STATUS_LABELS = {
 }
 
 SENTIMENT_LABELS = {
-    "likely_positive": "利好",
+    "likely_positive": "偏多",
     "neutral": "中性",
-    "negative": "利空",
+    "negative": "偏空",
     "uncertain": "不确定",
 }
 
 TIER_LABELS = {"core": "核心池", "watch": "观察池", "retired": "已退役"}
 
-CATEGORY_LABELS = {"policy": "政策", "research": "研报", "news": "快讯"}
+CATEGORY_LABELS = {"policy": "政策", "research": "研报", "news": "快讯", "international": "国际"}
 
 
 def status_label(value: str) -> str:

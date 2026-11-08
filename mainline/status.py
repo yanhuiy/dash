@@ -8,13 +8,14 @@ from typing import Any
 def _strong_ok(row: dict, thr: dict, aux_enabled: bool, aux_min: int) -> bool:
     if row["rs"] is None or row["breadth"] is None or row["volume_ratio"] is None:
         return False
-    base = (
-        row.get("rs_rising")
-        and row["volume_ratio"] > float(thr["volume_ratio_strong"])
-        and row["breadth"] > float(thr["breadth_strong"])
-        and int(row["catalyst_count"]) >= 1
-    )
-    if not base:
+    required = int(thr.get("strong_conditions_required", 3))
+    conditions = [
+        bool(row.get("rs_rising")),
+        row["volume_ratio"] > float(thr["volume_ratio_strong"]),
+        row["breadth"] > float(thr["breadth_strong"]),
+        int(row["catalyst_count"]) >= 1,
+    ]
+    if sum(conditions) < required:
         return False
     if aux_enabled:
         return bool(row.get("limit_up_count")) and row.get("limit_up_trend") == "递增" and int(
@@ -27,12 +28,14 @@ def _weak_ok(row: dict, thr: dict) -> bool:
     if row["rs"] is None or row["breadth"] is None or row["volume_ratio"] is None:
         return False
     below = int(row["extras"].get("leaders_below_ma20", 0))
-    return bool(
-        row["extras"].get("rs_falling")
-        and row["breadth"] < float(thr["breadth_weak"])
-        and below >= int(thr.get("leaders_below_ma20_min", 2))
-        and row["volume_ratio"] < float(thr["volume_ratio_weak"])
-    )
+    required = int(thr.get("weak_conditions_required", 3))
+    conditions = [
+        bool(row["extras"].get("rs_falling")),
+        row["breadth"] < float(thr["breadth_weak"]),
+        below >= int(thr.get("leaders_below_ma20_min", 2)),
+        row["volume_ratio"] < float(thr["volume_ratio_weak"]),
+    ]
+    return sum(conditions) >= required
 
 
 def _crowded_ok(row: dict, thr: dict) -> bool:

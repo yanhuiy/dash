@@ -13,9 +13,49 @@ news_lookback_days: 7
 display_max_policy: 3
 display_max_research: 3
 
+# 新闻与催化（Tab 1）
+news:
+  international_enabled: true     # 隔夜国际要闻是否启用
+  international_min: 3            # 国际要闻最少条数
+  international_limit: 5          # 国际要闻最多展示条数
+  research_match_min_dims: 2      # 研报三重命中（标题/摘要/行业标签）至少匹配几维
+  today_bishop_limit: 3           # 今日必看最多条数
+  today_bishop_max_per_theme: 2   # 今日必看同一主线最多条数
+  source_weights:                 # 来源权重（今日必看排序用），缺省为 1
+    "中国政府网": 3
+    "中国人民银行": 3
+    "中国证监会": 3
+    "国家统计局": 3
+    "东方财富研报": 2
+    "华尔街见闻": 2
+
+# 国际要闻催化词（扩一层国际维度，用于过滤 category=international 条目）
+catalyst_words_international:
+  - 美联储
+  - 降息
+  - 加息
+  - CPI
+  - 非农
+  - 关税
+  - 制裁
+  - 英伟达
+  - 台积电
+  - OpenAI
+  - 地缘
+  - 战争
+  - OPEC
+  - 库存
+  - 原油
+  - 黄金
+  - 铜
+  - 美债
+  - 美元
+
 thresholds:
   rs_trend_days: 4                # RS 连续上升/下降天数；回测滚动样本外 3/3 折为正
-  volume_ratio_strong: 1.5
+  strong_conditions_required: 3   # 强化判定：4 条指标至少满足几条（默认 4 选 3）
+  weak_conditions_required: 3     # 走弱判定：4 条指标至少满足几条（默认 4 选 3）
+  volume_ratio_strong: 1.2
   volume_ratio_weak: 0.8
   breadth_strong: 0.8             # 强化宽度门槛；回测各折均选中 0.8
   breadth_weak: 0.4
@@ -44,11 +84,13 @@ limit_up:
   enable_as_aux: false            # 涨停数据仅作强化/走弱参考，默认不参与判定
   min_count_per_day: 3
   consecutive_days: 2
+  filter_default: true            # 涨停热度默认只显示主线池 + 候选方向
 
 sources:
   policy: [gov_cn, pboc, csrc, stats]
   research: [eastmoney_report]
   news: [wallstreetcn]
+  international: [wallstreetcn_intl]
   market_api: [tencent_index, sina_stock, sina_global, eastmoney_bond]
   limit_up: [eastmoney_limitup]
 
@@ -72,6 +114,8 @@ publish:
   archive_limit: 180              # 最多保留多少个历史日期页面
   auto_refresh_seconds: 600       # 最新页自动重载间隔（秒），0 表示关闭
   site_title: "市场主线切换盘后看板"
+  default_tab: "mainline"         # 默认显示 Tab：mainline（主线与方向）或 news（新闻与催化）
+  refresh_data_note: "页面每{minutes}分钟自动重载；数据由计划任务定时更新"  # 三处刷新文案统一模板
 
 # AI 仅用于一句话摘要与情绪分类，不预测涨跌。默认关闭，关闭时使用规则摘要。
 ai:

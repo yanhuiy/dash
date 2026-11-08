@@ -119,7 +119,8 @@ def run(
                 target = baseline_last
                 failures.append(f"基准指数未更新到 {started.date()}，快照日期回退到 {baseline_last}")
 
-    trade_days = [day for day in calendar if day <= target]
+    all_trade_days = [day for day in calendar if day <= target]
+    trade_days = list(all_trade_days)
     if len(trade_days) < 5:
         if baseline is not None and not baseline.empty:
             trade_days = sorted(baseline["date"].tolist())
@@ -197,7 +198,7 @@ def run(
         row["note"] = "；".join(filter(None, [row.get("note", ""), reasons.get(theme_id, "")]))
 
     directions = choose_directions(metrics, statuses, prev_themes)
-    radar = build_radar(metrics, statuses, prev_themes, switch_meta)
+    radar = build_radar(metrics, statuses, prev_themes, switch_meta, reasons=reasons)
 
     generated_at = now().isoformat(timespec="seconds")
     prev_date = db.previous_date(conn, target.isoformat())
@@ -215,6 +216,7 @@ def run(
         "catalyst_5d": catalyst_5d,
         "limit_up_available": lu_available,
         "window_dates": [str(day) for day in window_dates],
+        "trade_days": [str(day) for day in all_trade_days[-400:]],
         "display": {
             "policy": [item["url"] for item in display_policy],
             "research": [item["url"] for item in display_research],
@@ -265,6 +267,7 @@ def run(
             "sentiment": item.get("sentiment", "neutral"),
             "url": item["url"],
             "event_key": item.get("event_key", ""),
+            "source_weight": int(item.get("source_weight", 1)),
         }
         for item in news_items
     ]
@@ -376,6 +379,7 @@ def run(
             "policy": sum(1 for item in news_items if item["category"] == "policy"),
             "research": sum(1 for item in news_items if item["category"] == "research"),
             "news": sum(1 for item in news_items if item["category"] == "news"),
+            "international": sum(1 for item in news_items if item["category"] == "international"),
         },
         "limit_up_available": lu_available,
     }
