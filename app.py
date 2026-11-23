@@ -93,11 +93,17 @@ def render_news(item: dict) -> None:
 
 def pick_items(items: list[dict], category: str, urls: list[str], limit: int) -> list[dict]:
     pool = [item for item in items if item["category"] == category]
+    pool.sort(key=lambda item: item.get("published_at", ""), reverse=True)
     by_url = {item["url"]: item for item in pool}
     chosen = [by_url[url] for url in urls if url in by_url]
-    if not chosen:
-        pool.sort(key=lambda item: item.get("published_at", ""), reverse=True)
-        chosen = pool
+    chosen_urls = {item["url"] for item in chosen}
+    for item in pool:
+        if len(chosen) >= limit:
+            break
+        if item["url"] in chosen_urls:
+            continue
+        chosen.append(item)
+        chosen_urls.add(item["url"])
     return chosen[:limit]
 
 

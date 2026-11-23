@@ -10,24 +10,28 @@ catalyst_window_days: 5
 # 新闻/研报展示回溯天数（自然日）
 news_lookback_days: 7
 # 看板每个区块最多展示条数
-display_max_policy: 3
-display_max_research: 3
+display_max_policy: 6
+display_max_research: 6
 
 # 新闻与催化（Tab 1）
 news:
   international_enabled: true     # 隔夜国际要闻是否启用
   international_min: 3            # 国际要闻最少条数
-  international_limit: 5          # 国际要闻最多展示条数
+  international_limit: 8          # 国际要闻最多展示条数
   research_match_min_dims: 2      # 研报三重命中（标题/摘要/行业标签）至少匹配几维
-  today_bishop_limit: 3           # 今日必看最多条数
+  today_bishop_limit: 5           # 今日必看最多条数
   today_bishop_max_per_theme: 2   # 今日必看同一主线最多条数
+  news_display_max: 10            # 实时快讯最多展示条数
   source_weights:                 # 来源权重（今日必看排序用），缺省为 1
     "中国政府网": 3
     "中国人民银行": 3
     "中国证监会": 3
     "国家统计局": 3
+    "人民日报": 3
+    "新华社": 3
     "东方财富研报": 2
     "华尔街见闻": 2
+    "财联社": 2
 
 # 国际要闻催化词（扩一层国际维度，用于过滤 category=international 条目）
 catalyst_words_international:
@@ -87,9 +91,9 @@ limit_up:
   filter_default: true            # 涨停热度默认只显示主线池 + 候选方向
 
 sources:
-  policy: [gov_cn, pboc, csrc, stats]
+  policy: [gov_cn, pboc, csrc, stats, people_cn, xinhua]
   research: [eastmoney_report]
-  news: [wallstreetcn]
+  news: [wallstreetcn, cls]
   international: [wallstreetcn_intl]
   market_api: [tencent_index, sina_stock, sina_global, eastmoney_bond]
   limit_up: [eastmoney_limitup]

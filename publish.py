@@ -195,11 +195,17 @@ def render_news(item: dict, theme_names: dict[str, str]) -> str:
 
 def pick_items(items: list[dict], category: str, urls: list[str], limit: int) -> list[dict]:
     pool = [item for item in items if item["category"] == category]
+    pool.sort(key=lambda item: item.get("published_at", ""), reverse=True)
     by_url = {item["url"]: item for item in pool}
     chosen = [by_url[url] for url in urls if url in by_url]
-    if not chosen:
-        pool.sort(key=lambda item: item.get("published_at", ""), reverse=True)
-        chosen = pool
+    chosen_urls = {item["url"] for item in chosen}
+    for item in pool:
+        if len(chosen) >= limit:
+            break
+        if item["url"] in chosen_urls:
+            continue
+        chosen.append(item)
+        chosen_urls.add(item["url"])
     return chosen[:limit]
 
 
@@ -410,6 +416,19 @@ def render_international(
     return "".join(render_news(item, theme_names) for item in pool[:limit])
 
 
+def render_news_feed(
+    items: list[dict], theme_names: dict[str, str], config: dict[str, Any]
+) -> str:
+    cfg = config.get("news") or {}
+    limit = int(cfg.get("news_display_max", 10))
+    pool = [item for item in items if item.get("category") == "news"]
+    pool.sort(key=lambda item: item.get("published_at", ""), reverse=True)
+    pool = _dedupe_news(pool)
+    if not pool:
+        return '<p class="empty">今日暂无命中主线的实时快讯。</p>'
+    return "".join(render_news(item, theme_names) for item in pool[:limit])
+
+
 def render_catalyst(
     themes: list[dict],
     theme_names: dict[str, str],
@@ -500,6 +519,7 @@ def build_page(
     )
     bishop_html = render_today_bishop(news_items, theme_names, config)
     international_html = render_international(news_items, theme_names, config)
+    news_feed_html = render_news_feed(news_items, theme_names, config)
 
     catalyst_today = payload.get("catalyst_today") or {}
     catalyst_5d = payload.get("catalyst_5d") or {}
@@ -921,18 +941,24 @@ footer p {{ margin: 4px 0; }}
     <h2><span class="letter">B</span> 公开政策与研报</h2>
     <p class="note">政策与研报仅保留公开链接，不抓取付费全文。</p>
     <div class="grid2">
-      <div class="panel"><h3>政策（最多3条）</h3>{policy_html}</div>
-      <div class="panel"><h3>研报（最多3条）</h3>{research_html}</div>
+      <div class="panel"><h3>政策（最多6条）</h3>{policy_html}</div>
+      <div class="panel"><h3>研报（最多6条）</h3>{research_html}</div>
     </div>
   </section>
 
   <section>
-    <h2><span class="letter">C</span> 隔夜国际要闻</h2>
+    <h2><span class="letter">C</span> 实时快讯</h2>
+    <p class="note">财联社电报与华尔街见闻快讯，仅保留命中主线催化词的条目。</p>
+    {news_feed_html}
+  </section>
+
+  <section>
+    <h2><span class="letter">D</span> 隔夜国际要闻</h2>
     {international_html}
   </section>
 
   <section>
-    <h2><span class="letter">D</span> 催化计数</h2>
+    <h2><span class="letter">E</span> 催化计数</h2>
     <p class="note">同一事件多源只计一次；未命中主线显示 0。点计数可展开该主线条目。</p>
     <p class="note" style="margin-top:4px">今日</p>
     <div class="chips">{catalyst_today_html}</div>
@@ -941,14 +967,14 @@ footer p {{ margin: 4px 0; }}
   </section>
 
   <section>
-    <h2><span class="letter">E</span> 涨停方向热度</h2>
+    <h2><span class="letter">F</span> 涨停方向热度</h2>
     <p class="note">仅作情绪验证，不参与核心判定。默认只显示主线池与连续两日候选方向。</p>
     {limit_up_html}
   </section>
 </div>
 
 <footer>
-  <p>数据来源：中国政府网、央行、证监会、统计局、东方财富研报、华尔街见闻、腾讯/新浪行情、东方财富涨停池。</p>
+  <p>数据来源：中国政府网、央行、证监会、统计局、人民日报、新华社、东方财富研报、华尔街见闻、财联社、腾讯/新浪行情、东方财富涨停池。</p>
   <p>本看板仅用于研究与信息整理，不构成任何投资建议；不对涨跌做预测。</p>
   <p>{esc(refresh_text)}。页面由 <code>publish.py</code> 从本地快照生成。</p>
 </footer>

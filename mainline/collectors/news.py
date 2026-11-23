@@ -180,6 +180,111 @@ def fetch_stats(start: date, end: date) -> list[dict[str, Any]]:
     return items[:30]
 
 
+def fetch_people_cn(start: date, end: date) -> list[dict[str, Any]]:
+    """人民日报评论/发声（人民网观点频道：人民锐评/人民时评/评论员等），category=policy。"""
+    url = "http://opinion.people.com.cn/"
+    resp = _get(url)
+    resp.encoding = resp.apparent_encoding
+    soup = BeautifulSoup(resp.text, "html.parser")
+    items: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for a in soup.select("a[href]"):
+        href = a.get("href") or ""
+        title = _clean(a.get_text())
+        m = re.search(r"/n1/(20\d{2})/(\d{2})(\d{2})/", href)
+        if not m or len(title) < 8:
+            continue
+        pub = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+        if not _date_in_window(pub, start, end):
+            continue
+        full_url = urljoin("http://opinion.people.com.cn", href)
+        if full_url in seen:
+            continue
+        seen.add(full_url)
+        items.append(
+            {
+                "category": "policy",
+                "title": title,
+                "source": "人民日报",
+                "published_at": pub,
+                "summary": "",
+                "url": full_url,
+            }
+        )
+    return items[:30]
+
+
+_XINHUA_KEEP_WORDS = [
+    "发布", "印发", "召开", "政策", "评论", "时评", "观察", "方案", "意见",
+    "通知", "规划", "部署", "改革", "会议", "条例", "规定", "讲话", "会见",
+    "调研", "签署", "合作", "公布", "通报", "出台", "精神", "清单", "公告",
+]
+
+
+def fetch_xinhua(start: date, end: date) -> list[dict[str, Any]]:
+    """新华社时政频道 HTML（权威政策/发声），category=policy。"""
+    url = "http://www.news.cn/politics/"
+    resp = _get(url)
+    resp.encoding = resp.apparent_encoding
+    soup = BeautifulSoup(resp.text, "html.parser")
+    items: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for a in soup.select("a[href]"):
+        href = a.get("href") or ""
+        title = _clean(a.get_text())
+        if len(title) < 10 or "/comments/" in href or "/zt/" in href:
+            continue
+        if not _match_words(title, _XINHUA_KEEP_WORDS):
+            continue
+        pub = _date_from_url(href)
+        if not pub or not _date_in_window(pub, start, end):
+            continue
+        full_url = urljoin("http://www.news.cn", href)
+        if full_url in seen:
+            continue
+        seen.add(full_url)
+        items.append(
+            {
+                "category": "policy",
+                "title": title,
+                "source": "新华社",
+                "published_at": pub,
+                "summary": "",
+                "url": full_url,
+            }
+        )
+    return items[:30]
+
+
+def fetch_cls(start: date, end: date) -> list[dict[str, Any]]:
+    """财联社电报（实时快讯，覆盖英伟达/美股科技/政策突发），category=news。"""
+    import akshare as ak
+
+    df = ak.stock_info_global_cls(symbol="全部")
+    items: list[dict[str, Any]] = []
+    for _, row in df.iterrows():
+        title = _clean(str(row.get("标题", "")))
+        content = _clean(str(row.get("内容", "")))
+        pub_day = str(row.get("发布日期", ""))[:10]
+        pub_time = str(row.get("发布时间", ""))
+        if not title or not _date_in_window(pub_day, start, end):
+            continue
+        published_at = f"{pub_day} {pub_time}" if pub_time and pub_time != "None" else pub_day
+        # 财联社电报无独立 URL，用标题+时间哈希构造稳定伪 URL 供去重/事件键使用
+        pseudo = hashlib.md5((title + pub_day + pub_time).encode("utf-8")).hexdigest()[:16]
+        items.append(
+            {
+                "category": "news",
+                "title": title,
+                "source": "财联社",
+                "published_at": published_at,
+                "summary": content[:220],
+                "url": f"cls://{pseudo}",
+            }
+        )
+    return items
+
+
 def fetch_research(start: date, end: date) -> list[dict[str, Any]]:
     url = "https://reportapi.eastmoney.com/report/list"
     items: list[dict[str, Any]] = []
@@ -395,6 +500,8 @@ def collect_all(
         "pboc": ("中国人民银行", fetch_pboc),
         "csrc": ("中国证监会", fetch_csrc),
         "stats": ("国家统计局", fetch_stats),
+        "people_cn": ("人民日报", fetch_people_cn),
+        "xinhua": ("新华社", fetch_xinhua),
     }
     for key, (label, fn) in policy_map.items():
         if key not in policy_sources:
@@ -418,6 +525,15 @@ def collect_all(
             raw.extend(wscn_items)
         except Exception as exc:
             failures.append(f"快讯源 华尔街见闻: {type(exc).__name__}")
+
+    if "cls" in set(config["sources"].get("news", [])):
+        try:
+            cls_items = fetch_cls(start, end)
+            if not cls_items:
+                failures.append(f"快讯源 财联社: 未覆盖 {end}，该源今日缺失")
+            raw.extend(cls_items)
+        except Exception as exc:
+            failures.append(f"快讯源 财联社: {type(exc).__name__}")
 
     # 隔夜国际要闻：复用华尔街见闻全球快讯，按国际催化词过滤
     international_enabled = bool(config.get("news", {}).get("international_enabled", True))
@@ -465,8 +581,8 @@ def collect_all(
             )
         else:
             hits = match_themes(text, themes)
-        # 政策/研报/快讯只保留命中主线催化词的条目；国际要闻已按国际词过滤，保留全部
-        if category in ("policy", "research", "news") and not hits:
+        # 研报/快讯只保留命中主线催化词的条目；政策权威源无条件保留；国际要闻已按国际词过滤，保留全部
+        if category in ("research", "news") and not hits:
             continue
         if category == "research" and item.get("rating"):
             if any(word in item["rating"] for word in ("买入", "增持", "推荐", "强推", "优于大市")):
