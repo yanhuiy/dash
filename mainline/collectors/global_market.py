@@ -201,3 +201,38 @@ def fetch_global_quotes(config: dict[str, Any], target_date: date) -> tuple[list
     order = {name: idx for idx, name in enumerate(display_order)}
     quotes.sort(key=lambda row: order.get(row["name"], 99))
     return quotes, failures
+
+
+def compute_trend_metrics(seq: list[float], cfg: dict[str, Any]) -> dict[str, Any]:
+    """给定按时间升序的 latest 序列，计算趋势指标。
+
+    返回 ret_short / ret_long（涨跌幅百分比）与 trend（均线排列标签）。
+    序列长度不足时对应字段为 None。
+    """
+    short = int(cfg.get("short_days", 5))
+    long = int(cfg.get("long_days", 10))
+    ma_fast = int(cfg.get("ma_fast", 5))
+    ma_slow = int(cfg.get("ma_slow", 10))
+
+    def _ret(n: int) -> float | None:
+        if len(seq) < n + 1:
+            return None
+        base = seq[-1 - n]
+        latest = seq[-1]
+        if not base or not latest:
+            return None
+        return (latest / base - 1) * 100
+
+    trend: str | None = None
+    if len(seq) >= ma_slow:
+        latest = seq[-1]
+        fast = sum(seq[-ma_fast:]) / ma_fast
+        slow = sum(seq[-ma_slow:]) / ma_slow
+        if latest > fast > slow:
+            trend = "多头排列"
+        elif latest < fast < slow:
+            trend = "空头排列"
+        else:
+            trend = "震荡整理"
+
+    return {"ret_short": _ret(short), "ret_long": _ret(long), "trend": trend}

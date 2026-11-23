@@ -13,6 +13,13 @@ news_lookback_days: 7
 display_max_policy: 6
 display_max_research: 6
 
+# 外围行情（美股期货/商品/汇率）趋势指标，基于历史快照序列计算
+global_trend:
+  short_days: 5                  # 近N日涨跌幅
+  long_days: 10                  # 近N日涨跌幅
+  ma_fast: 5                     # 快速均线
+  ma_slow: 10                    # 慢速均线
+
 # 新闻与催化（Tab 1）
 news:
   international_enabled: true     # 隔夜国际要闻是否启用

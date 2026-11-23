@@ -64,6 +64,9 @@ CREATE TABLE IF NOT EXISTS market_quotes (
     change_pct REAL,
     note TEXT,
     quote_time TEXT,
+    ret_short REAL,
+    ret_long REAL,
+    trend TEXT,
     PRIMARY KEY (date, symbol)
 );
 
@@ -111,6 +114,12 @@ def init_db(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE news_items ADD COLUMN source_weight INTEGER")
     except sqlite3.OperationalError:
         pass
+    # 兼容旧库：market_quotes 若缺少趋势指标列则补充
+    for col in ("ret_short REAL", "ret_long REAL", "trend TEXT"):
+        try:
+            conn.execute(f"ALTER TABLE market_quotes ADD COLUMN {col}")
+        except sqlite3.OperationalError:
+            pass
     conn.commit()
 
 
@@ -172,9 +181,11 @@ def save_day(
         conn.executemany(
             """
             INSERT INTO market_quotes (
-                date, symbol, name, category, latest, change_pct, note, quote_time
+                date, symbol, name, category, latest, change_pct, note, quote_time,
+                ret_short, ret_long, trend
             ) VALUES (
-                :date, :symbol, :name, :category, :latest, :change_pct, :note, :quote_time
+                :date, :symbol, :name, :category, :latest, :change_pct, :note, :quote_time,
+                :ret_short, :ret_long, :trend
             )
             """,
             quote_rows,

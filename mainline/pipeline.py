@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from datetime import date, datetime
 from typing import Any
 
@@ -33,6 +34,32 @@ def _select_display(items: list[dict], category: str, limit: int) -> list[dict]:
     pool = [item for item in items if item["category"] == category]
     pool.sort(key=lambda item: item.get("published_at", ""), reverse=True)
     return pool[:limit]
+
+
+def _enrich_quotes(
+    conn: sqlite3.Connection,
+    target: date,
+    quotes: list[dict[str, Any]],
+    config: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """基于 market_quotes 历史快照，为外围行情补齐趋势指标。"""
+    cfg = config.get("global_trend") or {}
+    history: dict[str, list[float]] = {}
+    for row in conn.execute(
+        "SELECT symbol, latest FROM market_quotes "
+        "WHERE date < ? AND latest IS NOT NULL ORDER BY date",
+        (target.isoformat(),),
+    ):
+        history.setdefault(row["symbol"], []).append(row["latest"])
+    enriched: list[dict[str, Any]] = []
+    for quote in quotes:
+        item = dict(quote)
+        seq = list(history.get(quote["symbol"], []))
+        if quote.get("latest") is not None:
+            seq.append(quote["latest"])
+        item.update(global_market.compute_trend_metrics(seq, cfg))
+        enriched.append(item)
+    return enriched
 
 
 def _catalyst_counts(
@@ -150,6 +177,7 @@ def run(
 
     quotes, quote_failures = global_market.fetch_global_quotes(config, target)
     failures.extend(quote_failures)
+    quotes = _enrich_quotes(conn, target, quotes, config)
 
     catalyst_5d, catalyst_today = _catalyst_counts(news_items, themes, window_dates, target)
 
@@ -280,7 +308,10 @@ def run(
             "date": target.isoformat(),
             **{
                 key: quote.get(key)
-                for key in ("symbol", "name", "category", "latest", "change_pct", "note", "quote_time")
+                for key in (
+                    "symbol", "name", "category", "latest", "change_pct", "note", "quote_time",
+                    "ret_short", "ret_long", "trend",
+                )
             },
         }
         for quote in quotes

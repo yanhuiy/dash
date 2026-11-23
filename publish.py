@@ -94,6 +94,12 @@ def quote_change(symbol: str, value: float | None) -> str:
     return f"{value:+.2f}%"
 
 
+def quote_ret(value: float | None, digits: int = 1) -> str:
+    if value is None:
+        return "—"
+    return f"{value:+.{digits}f}%"
+
+
 def status_badge(status: str | None) -> str:
     if not status:
         return '<span class="badge s-none">—</span>'
@@ -528,18 +534,27 @@ def build_page(
         selected, payload.get("window_dates") or [],
     )
 
+    trend_cfg = config.get("global_trend") or {}
+    short_days = int(trend_cfg.get("short_days", 5))
+    long_days = int(trend_cfg.get("long_days", 10))
     quote_rows = [
         [
             esc(row["name"]),
             quote_latest(row["symbol"], row["latest"]),
             quote_change(row["symbol"], row["change_pct"]),
+            quote_ret(row.get("ret_short")),
+            quote_ret(row.get("ret_long")),
+            esc(row.get("trend") or "—"),
             esc(row["quote_time"] or "—"),
             esc(row["note"] or "—"),
         ]
         for row in quotes
     ]
     quotes_html = (
-        table(["品种", "最新", "涨跌幅", "行情时间", "对A股主线影响"], quote_rows)
+        table(
+            ["品种", "最新", "涨跌幅", f"近{short_days}日", f"近{long_days}日", "趋势", "行情时间", "对A股主线影响"],
+            quote_rows,
+        )
         if quotes
         else '<p class="empty">该源今日缺失：未获取到美股期货/美元/美债/商品/汇率行情。</p>'
     )
