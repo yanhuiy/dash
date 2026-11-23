@@ -180,8 +180,23 @@ def fetch_stats(start: date, end: date) -> list[dict[str, Any]]:
     return items[:30]
 
 
+_PEOPLE_CN_KEEP_WORDS = [
+    # 宏观/政策/金融
+    "经济", "发展", "增长", "改革", "开放", "政策", "规划", "方案", "意见", "条例",
+    "监管", "立法", "营商", "财政", "货币", "金融", "资本", "市场", "投资",
+    "降息", "加息", "利率", "汇率", "税收", "民生", "就业", "内需", "消费",
+    # 产业/科技
+    "产业", "制造", "科技", "创新", "数字", "人工智能", "大模型", "算力", "芯片",
+    "半导体", "新能源", "光伏", "医药", "医疗", "军工", "国防", "能源", "有色",
+    "黄金", "大宗", "供应链", "企业", "民营", "外贸", "出口", "进口", "关税",
+    "平台", "国货",
+    # 国际/地缘
+    "国际", "世界", "地缘", "中美", "亚太", "中东", "和平", "制裁",
+]
+
+
 def fetch_people_cn(start: date, end: date) -> list[dict[str, Any]]:
-    """人民日报评论/发声（人民网观点频道：人民锐评/人民时评/评论员等），category=policy。"""
+    """人民日报评论/发声（人民网观点频道），只保留经济/政策/产业/科技/国际相关评论。"""
     url = "http://opinion.people.com.cn/"
     resp = _get(url)
     resp.encoding = resp.apparent_encoding
@@ -192,7 +207,9 @@ def fetch_people_cn(start: date, end: date) -> list[dict[str, Any]]:
         href = a.get("href") or ""
         title = _clean(a.get_text())
         m = re.search(r"/n1/(20\d{2})/(\d{2})(\d{2})/", href)
-        if not m or len(title) < 8:
+        if not m or len(title) < 8 or len(title) > 50:
+            continue
+        if not _match_words(title, _PEOPLE_CN_KEEP_WORDS):
             continue
         pub = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
         if not _date_in_window(pub, start, end):

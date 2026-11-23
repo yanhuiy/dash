@@ -273,13 +273,24 @@ def render_all_themes(themes: list[dict]) -> str:
             extras = json.loads(row["extras_json"]) if row.get("extras_json") else {}
         except (TypeError, ValueError):
             extras = {}
-        trend_bits = ["站上20日线" if row["trend_above_ma20"] else "跌破20日线"]
-        if row["trend_golden_cross"]:
+        above_ma20 = bool(row["trend_above_ma20"])
+        golden = bool(row["trend_golden_cross"])
+        ma5_over = bool(row["trend_ma5_over_ma10"])
+        ma5_up = golden or ma5_over
+        if above_ma20 and ma5_up:
+            trend_label = "▲ 多头排列"
+        elif not above_ma20 and not ma5_up:
+            trend_label = "▼ 空头排列"
+        else:
+            trend_label = "◆ 震荡整理"
+        trend_bits = ["站上20日线" if above_ma20 else "跌破20日线"]
+        if golden:
             trend_bits.append("5/10金叉")
-        elif row["trend_ma5_over_ma10"]:
+        elif ma5_over:
             trend_bits.append("5日线>10日线")
         else:
             trend_bits.append("5日线<10日线")
+        trend_cell = f"{trend_label}（{'·'.join(trend_bits)}）"
         rows.append(
             [
                 esc(row["name"]),
@@ -292,7 +303,7 @@ def render_all_themes(themes: list[dict]) -> str:
                 esc(row["catalyst_count"]),
                 esc(row["limit_up_count"] if row["limit_up_count"] is not None else "—"),
                 pct(row["ret_5d"]),
-                esc("；".join(trend_bits)),
+                esc(trend_cell),
                 esc(row["carrier"]),
                 esc(row["note"] or "—"),
             ]
